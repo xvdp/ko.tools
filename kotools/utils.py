@@ -12,6 +12,7 @@ import psutil
 
 import numpy as np
 import yaml
+import json
 
 __all__ = ["ObjDict", "TraceMem", "GPUse", "CPUse"]
 # pylint: disable=no-member
@@ -26,6 +27,8 @@ class ObjDict(dict):
     >>> d.new_key = some_value      # get or set keys as objects
     >>> d.to_yaml(filename)         # write yaml
     >>> d.from_yaml(filename)       # load yaml
+    >>> d.to_json(filename)         # write json
+    >>> d.from_json(filename)       # load json
     """
     def __getattr__(self, name: str) -> Any:
         try:
@@ -39,19 +42,45 @@ class ObjDict(dict):
     def __delattr__(self, name: str) -> None:
         del self[name]
 
-    def to_yaml(self, name):
+    def _blank(self)-> None:
+        keys = list(self.keys())
+        for k in keys:
+            del self[k]
+
+    def to_yaml(self, name)-> None:
         """ save to yaml"""
-        os.makedirs(osp.split(name)[0], exist_ok=True)
         with open(name, 'w') as _fi:
             yaml.dump(dict(self), _fi)
 
-    def from_yaml(self, name):
+    def from_yaml(self, name, update=False)-> None:
         """ load yaml"""
+        name = _get_fullname(name)
+        if not update:
+            self._blank()
         with open(name, 'r') as _fi:
-            _dict = yaml.load(_fi, Loader=get_loader())
+            _dict = yaml.load(_fi, Loader=_get_yaml_loader())
             self.update(_dict)
 
-def get_loader(loader=None):
+    def to_json(self, name)-> None:
+        """save to json"""
+        name = _get_fullname(name)
+        with open(name, 'w') as _fi:
+            json.dump(dict(self), _fi)
+
+    def from_json(self, name, update=False)-> None:
+        """load json"""
+        if not update:
+            self._blank()
+        with open(name, 'r') as _fi:
+            _dict = json.load(_fi)
+            self.update(_dict)
+
+def _get_fullname(name):
+    name = osp.expanduser(osp.abspath(name))
+    os.makedirs(osp.split(name)[0], exist_ok=True)
+    return name
+
+def _get_yaml_loader(loader=None):
     loaders = yaml.loader.__dict__['__all__']
     loader = loader if loader is not None else ["FullLoader", "BaseLoader"]
     loader = [loader] if isinstance(loader, str) else loader

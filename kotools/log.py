@@ -19,7 +19,13 @@ from .utils import ObjDict
 # sround lambda x, d=1: np.round(x, max((-np.floor(safelog10(x)).astype(int) + d), 0))
 # 
 def sround(x, digits=1):
-    """ sround(x, d=1), smart round to largest digit + d; e.g. sround(0.0212343, 2): 0.0212"""
+    """ 'smart' round to largest `digits` + 1
+    Args
+        x       (float, list, tuple, ndarray)
+        digits  (int [1]) number of digits beyond highest
+    Examples
+    >>> sround(0.0212343, 2) # result 0.0212
+    """
 
     if isinstance(x, (float, np.float64, np.float32)):
         safelog10 = lambda x: 0.0 if not x else np.log10(np.abs(x))
@@ -73,6 +79,8 @@ def sround(x, digits=1):
 
 #     return logger, stream
 
+# pylint: disable=unsubscriptable-object
+# pylint: disable=no-member
 class PLog:
     """ simple logger based in pandas
     Examples:
@@ -202,6 +210,8 @@ class PLog:
             if printlog:
                 print("\t".join(msg), **self._end)
 
+
+## TODO: move to PLOG
 def plotlog(logname, column="Loss", figsize=(10,5), title=None, label=None, show=True, fro=0, to=None, ylog=True):
     """ plots column [Loss] from csv file
     if column 'Epoch' exists, ticks them
