@@ -1,11 +1,7 @@
 """@xvdp
 """
-import sys
-import subprocess as sp
 from setuptools import setup, find_packages
 
-if sys.version_info[0] < 3:
-    raise RuntimeError("Python 3+ required.")
 
 def readme():
     with open('README.md') as _fo:
@@ -19,8 +15,6 @@ def set_version(version):
     with open('kotools/version.py', 'w') as _fi:
         _fi.write("version='"+version+"'")
     return version
-
-
 
 def setup_package():
     ''' setup '''
@@ -36,8 +30,7 @@ def setup_package():
         packages=find_packages(),
         long_description=readme(),
         tests_require=["pytest"],
-        include_package_data=True,
-        zip_safe=False)
+        include_package_data=True)
 
     setup(**metadata)
 

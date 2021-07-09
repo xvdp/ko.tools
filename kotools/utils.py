@@ -8,15 +8,14 @@ from typing import Any
 import subprocess as sp
 import os
 import os.path as osp
+import json
 import psutil
-
 import numpy as np
 import yaml
-import json
 
 __all__ = ["ObjDict", "TraceMem", "GPUse", "CPUse"]
-# pylint: disable=no-member
 
+# pylint: disable=no-member
 # ###
 # Memory management
 #
@@ -150,15 +149,17 @@ class TraceMem(ObjTrace):
 
         if verbose:
             msg = msg + ": " if msg else ""
-
             print(f"{msg}Used CPU {dCPU}, GPU {dGPU} {self.units}")
             self.log_mem(cpu, gpu)
-    
-    def log(self):
-        print("{:^6}{:>12}{:>12}{:>12}{:>12}".format("step", "CPU avail", "CPU added", "GPU avail", "GPU added"))
-        for i in range(len(self.GPU)):
-         print("{:^6}{:>12}{:>12}{:>12}{:>12}  {:<6}".format(i, f"{self.CPU[i]} {self.units}", f"({self.dCPU[i]})", f"{self.GPU[i]} {self.units}", f"({self.dGPU[i]})", self.msg[i]))
 
+    def log(self):
+        print("{:^6}{:>12}{:>12}{:>12}{:>12}".format("step", "CPU avail", "CPU added",
+                                                     "GPU avail", "GPU added"))
+        for i in range(len(self.GPU)):
+            print("{:^6}{:>12}{:>12}{:>12}{:>12}  {:<6}".format(i, f"{self.CPU[i]} {self.units}",
+                                                                f"({self.dCPU[i]})",
+                                                                f"{self.GPU[i]} {self.units}",
+                                                                f"({self.dGPU[i]})", self.msg[i]))
 
 def get_smi(query):
     _cmd = ['nvidia-smi', '--query-gpu=memory.%s'%query, '--format=csv,nounits,noheader']

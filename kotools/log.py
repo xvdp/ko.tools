@@ -1,6 +1,5 @@
 """ @xvdp
 simple loggers
-* logging wrapper
 * pands train logger
 * plot train logger
 """
@@ -15,9 +14,8 @@ import matplotlib.pyplot as plt
 
 from .utils import ObjDict
 
-# safelog10 = lambda x: 0.0 if not x else np.log10(np.abs(x))
-# sround lambda x, d=1: np.round(x, max((-np.floor(safelog10(x)).astype(int) + d), 0))
-# 
+
+__all__ = ["sround", "Col", "PLog", "plotlog"]
 def sround(x, digits=1):
     """ 'smart' round to largest `digits` + 1
     Args
@@ -47,37 +45,15 @@ def sround(x, digits=1):
         x = tuple(x)
     return x
 
-# ##
-# # logging based loggers
-# #
-# def logger(name, level=20, terminator="\n"):
-#     """ level DEBUG = 10, defaults INFO 20, if None defaults to system WARNING
-
-#     Example:
-#         >>> from x_log import logger
-#         >>> log = logger("FunctionLog")
-#         >>> log[1].terminator = "\r"
-#         >>> for i in range(20)"
-#         >>>     log[0].info(f" iterating {i}")
-#         >>> log[1].terminator = "\n"
-#         >>> log[1].flush()
-#     """
-#     logger = logging.getLogger(name)
-#     if level is not None:
-#         logger.setLevel(level)
-#     if not logger.handlers:
-#         stream = logging.StreamHandler()
-#         if level is not None:
-#             stream.setLevel(level)
-#         formatter = logging.Formatter('Siren: %(name)s - %(levelname)s - %(message)s')
-#         stream.setFormatter(formatter)
-#         logger.addHandler(stream)
-#     else:
-#         stream = logger.handlers[0]
-
-#     stream.terminator = terminator
-
-#     return logger, stream
+class Col:
+    """Color text
+    """
+    AU = '\033[0m'
+    BB = '\033[94m\033[1m'
+    GB = '\033[92m\033[1m'
+    YB = '\033[93m\033[1m'
+    RB = '\033[91m\033[1m'
+    B = '\033[1m'
 
 # pylint: disable=unsubscriptable-object
 # pylint: disable=no-member
@@ -187,7 +163,7 @@ class PLog:
 
         #assert check file has been created
         _check_creation = not osp.isfile(self.name)
-    
+
         # write to csv
         dfl = pd.DataFrame(self.frame)
         dfl.to_csv(self.name, index=False, mode='a',
@@ -211,7 +187,7 @@ class PLog:
                 print("\t".join(msg), **self._end)
 
 
-## TODO: move to PLOG
+## TODO: move to PLOG, generalize, selfupdating
 def plotlog(logname, column="Loss", figsize=(10,5), title=None, label=None, show=True, fro=0, to=None, ylog=True):
     """ plots column [Loss] from csv file
     if column 'Epoch' exists, ticks them
@@ -290,7 +266,6 @@ def plotlog(logname, column="Loss", figsize=(10,5), title=None, label=None, show
     plt.yticks(_yticks, _yticks)
     plt.ylabel(_ylabel)
 
-
     if "label" in kwargs:
         plt.legend()
 
@@ -311,6 +286,41 @@ def _parseargs(args):
             col = args[1]
     assert osp.isfile(name), f" file {name} not found"
     return name, col
+
+
+# TODO , move all prints to absl.logging
+# ##
+# # logging based loggers
+# #
+# def logger(name, level=20, terminator="\n"):
+#     """ level DEBUG = 10, defaults INFO 20, if None defaults to system WARNING
+
+#     Example:
+#         >>> from x_log import logger
+#         >>> log = logger("FunctionLog")
+#         >>> log[1].terminator = "\r"
+#         >>> for i in range(20)"
+#         >>>     log[0].info(f" iterating {i}")
+#         >>> log[1].terminator = "\n"
+#         >>> log[1].flush()
+#     """
+#     logger = logging.getLogger(name)
+#     if level is not None:
+#         logger.setLevel(level)
+#     if not logger.handlers:
+#         stream = logging.StreamHandler()
+#         if level is not None:
+#             stream.setLevel(level)
+#         formatter = logging.Formatter('Siren: %(name)s - %(levelname)s - %(message)s')
+#         stream.setFormatter(formatter)
+#         logger.addHandler(stream)
+#     else:
+#         stream = logger.handlers[0]
+
+#     stream.terminator = terminator
+
+#     return logger, stream
+
 
 if __name__ == "__main__":
     """ Example

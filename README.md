@@ -4,11 +4,14 @@ repository to collect some common tools i use to manage learning
 
 ## classes
 ### logging
-`class Plog`        running log to collect to pandas csv <br>
-`class ObjDict`     thin wrap on dictionary for accessing keys as objects, read and write to yaml and json <br>
+`class Plog`         running log to collect to pandas csv <br>
+`class Col`          color print codes<br>
+
 ### memory
-`class GPUse`       thin wrap around nvidia-smi <br>
-`class CPUse`       thin wrap around psutil.virtualmemory <br>
-`class ObjTrace`    GPU and CPU collection based on ObjDict <br>
+`class GPUse`        thin wrap around nvidia-smi <br>
+`class CPUse`        thin wrap around psutil.virtualmemory <br>
+`class ObjTrace`     GPU and CPU collection based on ObjDict <br>
+
 ### general
-`sround(x, digits=1)`     smart round, to highest digits <br>
+`class ObjDict`       thin wrap on dictionary for accessing keys as objects, read and write to yaml and json <br>
+`sround(x, digits=1)` smart round, to highest digits <br>
