@@ -6,19 +6,66 @@
 """
 from typing import Any
 import subprocess as sp
+from copy import deepcopy
 import os
 import os.path as osp
 import json
 import psutil
 import numpy as np
+import torch
 import yaml
 
 __all__ = ["ObjDict", "TraceMem", "GPUse", "CPUse"]
 
 # pylint: disable=no-member
 # ###
-# Memory management
+# Dictionaries and Memory management
 #
+class DeepClone:
+    """ similar to deep copy detaching tensors to cpu
+        self.out    cloned data
+        self.stats  counter of classes cloned
+    """
+    def __init__(self, data, cpu=True):
+        self._cpu = cpu
+        self.out = None
+        self.stats = {}
+        with torch.no_grad():
+            self.out = self.clone(data)
+
+    def clone(self, data):
+        _type = data.__class__
+        if _type not in self.stats:
+            self.stats[_type] = 0
+        self.stats[_type] += 1
+
+        if isinstance(data, dict):
+            return self.clone_dict(data)
+        if isinstance(data, (list, tuple)):
+            return self.clone_list(data)
+        if isinstance(data, torch.Tensor):
+            if self._cpu:
+                return data.cpu().clone().detach()
+            return data.clone().detach()
+        else:
+            return deepcopy(data)
+
+    def clone_dict(self, data):
+        out = data.__class__()
+        for k in data:
+            out[k] = self.clone(data[k])
+        return out
+
+    def clone_list(self, data):
+        """ lists and tuples - should handle iterables generally"""
+        return data.__class__(self.clone(d) for d in data)
+
+def deepclone(data):
+    """ similar to deep copy detaching tensors to cpu
+            out = deepclone(data)
+    """
+    return DeepClone(data).out
+
 class ObjDict(dict):
     """ dict with object access to keys and read write to yaml files
     Examples:
