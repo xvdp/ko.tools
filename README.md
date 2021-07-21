@@ -2,7 +2,6 @@
 repository to collect some common tools i use to manage learning
 
 
-## classes
 ### logging
 `class Plog`         running log to collect to pandas csv <br>
 `class Col`          color print codes<br>
@@ -15,3 +14,7 @@ repository to collect some common tools i use to manage learning
 ### general
 `class ObjDict`       thin wrap on dictionary for accessing keys as objects, read and write to yaml and json <br>
 `sround(x, digits=1)` smart round, to highest digits <br>
+`deepclone(x)`        similar to deepcopy, converting torch tensors to cpu
+
+### training 
+`class Schedule`    scheduler, linear, exponential, with noisy periodic functions

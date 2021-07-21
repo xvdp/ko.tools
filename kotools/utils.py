@@ -12,15 +12,20 @@ import os.path as osp
 import json
 import psutil
 import numpy as np
-import torch
 import yaml
+
+WITH_TORCH = True
+try:
+    import torch
+except:
+    WITH_TORCH = False
 
 __all__ = ["ObjDict", "TraceMem", "GPUse", "CPUse"]
 
 # pylint: disable=no-member
 # ###
 # Dictionaries and Memory management
-#
+# 
 class DeepClone:
     """ similar to deep copy detaching tensors to cpu
         self.out    cloned data
@@ -30,8 +35,7 @@ class DeepClone:
         self._cpu = cpu
         self.out = None
         self.stats = {}
-        with torch.no_grad():
-            self.out = self.clone(data)
+        self.out = self.clone(data)
 
     def clone(self, data):
         _type = data.__class__
@@ -43,10 +47,11 @@ class DeepClone:
             return self.clone_dict(data)
         if isinstance(data, (list, tuple)):
             return self.clone_list(data)
-        if isinstance(data, torch.Tensor):
-            if self._cpu:
-                return data.cpu().clone().detach()
-            return data.clone().detach()
+        if WITH_TORCH and isinstance(data, torch.Tensor):
+            with torch.no_grad():
+                if self._cpu:
+                    return data.cpu().clone().detach()
+                return data.clone().detach()
         else:
             return deepcopy(data)
 
