@@ -103,14 +103,22 @@ class ObjDict(dict):
         with open(name, 'w') as _fi:
             yaml.dump(dict(self), _fi)
 
-    def from_yaml(self, name, update=False)-> None:
-        """ load yaml"""
+    def from_yaml(self, name, update=False, out_type=None, **kwargs)-> None:
+        """ load yaml to dictionary
+        Args
+            update      (bool [False]) False overwrites, True appends
+            out_type    (str [None]) numpy, torch
+            valid kwargs
+                dtype   (str ['float32'])
+                device  (str ['cuda']) | 'cpu'
+        """
         name = _get_fullname(name)
         if not update:
             self._blank()
         with open(name, 'r') as _fi:
             _dict = yaml.load(_fi, Loader=_get_yaml_loader())
             self.update(_dict)
+        self._as_type(out_type, **kwargs)
 
     def to_json(self, name)-> None:
         """save to json"""
@@ -118,13 +126,61 @@ class ObjDict(dict):
         with open(name, 'w') as _fi:
             json.dump(dict(self), _fi)
 
-    def from_json(self, name, update=False)-> None:
-        """load json"""
+    def from_json(self, name, update=False, out_type=None, **kwargs)-> None:
+        """load json to dictionary
+        Args
+            update      (bool [False]) False overwrites, True appends
+            out_type    (str [None]) numpy, torch
+            valid kwargs
+                dtype   (str ['float32'])
+                device  (str ['cuda']) | 'cpu'
+        """
         if not update:
             self._blank()
         with open(name, 'r') as _fi:
             _dict = json.load(_fi)
             self.update(_dict)
+        self._as_type(out_type, **kwargs)
+
+    def _as_type(self, out_type=None, **kwargs):
+        dtype = "float32" if "dtype" not in kwargs else kwargs["dtype"]
+        device = "cuda" if "device" not in kwargs else kwargs["device"]
+        if out_type is not None:
+            if out_type[0] == "n":
+                self.as_numpy(dtype=dtype)
+            elif out_type[0] in ('p', 't'):
+                self.as_torch(dtype=dtype, device=device)
+
+    def as_numpy(self, dtype="float32")-> None:
+        """ converts lists and torch tensors to numpy array
+            DOES not check array validity
+        """
+        dtype =  np.__dict__[dtype]
+        for key in self:
+            if isinstance(self[key], (list, tuple)):
+                self[key] = np.asarray(self[key], dtype=dtype)
+            elif WITH_TORCH and isinstance(self[key], torch.Tensor):
+                self[key] = self[key].cpu().clone().detach().numpy()
+
+    def as_torch(self, dtype="float32", device="cuda")-> None:
+        """ converts all lists and ndarrays to torch tensor
+            DOES not check array validity
+            DOES not convert dimensionless data
+        """
+        assert WITH_TORCH, "pytorch not found, install first"
+        dtype = torch.__dict__[dtype]
+        for key in self:
+            if isinstance(self[key], (list, tuple, np.ndarray)):
+                self[key] = torch.as_tensor(self[key], dtype=dtype, device=device)
+
+    def as_list(self)-> None:
+        """ converts all tensors and ndarrays to list
+        # will fail on dimensionless
+        """
+        for key in self:
+            if isinstance(self[key], np.ndarray) or WITH_TORCH and isinstance(self[key], torch.Tensor):
+                self[key] = self[key].tolist()
+
 
 def _get_fullname(name):
     name = osp.expanduser(osp.abspath(name))
