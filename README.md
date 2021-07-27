@@ -18,3 +18,9 @@ repository to collect some common tools i use to manage learning
 
 ### training 
 `class Schedule`    scheduler, linear, exponential, with noisy periodic functions
+
+### grids
+`np_mgrid`          fast n dimensional meshgrid with layout and column order options
+`torch_mgrid`
+`np_mgrid_pos`      grid indices
+`torch_mgrid_pos`
