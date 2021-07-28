@@ -1,3 +1,10 @@
+# caches
 .vscode/
 __pycache__/
+
+# build and install
+build/
+dist/
+*.egg-info/
+version.py
 
