@@ -26,5 +26,5 @@ repository to collect some common tools i use to manage learning
 `torch_mgrid_pos`
 
 ### random sampling
-`np_unique_random`      non repeating random ints
-`torch_unique_random`
+`np_unique_randint`      non repeating random ints
+`torch_unique_randint`

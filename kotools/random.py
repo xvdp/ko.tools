@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 # pylint: disable=no-member
-def np_unique_random(low, high, size, overflow=1.2):
+def np_unique_randint(low, high, size, overflow=1.2):
     """ returns a unique set of random ints
     Args
         low         (int)
@@ -16,7 +16,7 @@ def np_unique_random(low, high, size, overflow=1.2):
     samples = np.unique(np.random.randint(low, high, int(size*overflow)))
     num_samples = len(samples)
     if num_samples < size:
-        return np_unique_random(low, high, size, overflow*1.5)
+        return np_unique_randint(low, high, size, overflow*1.5)
 
     excess = num_samples - size
     if not excess:
@@ -26,7 +26,7 @@ def np_unique_random(low, high, size, overflow=1.2):
     return np.concatenate([samples[0:i], samples[i+excess:]])
 
 
-def torch_unique_random(low, high, size, overflow=1.2):
+def torch_unique_randint(low, high, size, overflow=1.2):
     """ returns a unique set of random ints
     Args
         low         (int)
@@ -39,7 +39,7 @@ def torch_unique_random(low, high, size, overflow=1.2):
     samples = torch.unique(torch.randint(low, high, (int(size*overflow),)))
     num_samples = len(samples)
     if num_samples < size:
-        return torch_unique_random(low, high, size, overflow*1.5)
+        return torch_unique_randint(low, high, size, overflow*1.5)
 
     excess = num_samples - size
     if not excess:
