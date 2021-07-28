@@ -110,7 +110,7 @@ class ObjDict(dict):
             out_type    (str [None]) numpy, torch
             valid kwargs
                 dtype   (str ['float32'])
-                device  (str ['cuda']) | 'cpu'
+                device  (str ['cpu']) | 'cuda'
         """
         name = _get_fullname(name)
         if not update:
@@ -144,7 +144,7 @@ class ObjDict(dict):
 
     def _as_type(self, out_type=None, **kwargs):
         dtype = "float32" if "dtype" not in kwargs else kwargs["dtype"]
-        device = "cuda" if "device" not in kwargs else kwargs["device"]
+        device = "cpu" if "device" not in kwargs else kwargs["device"]
         if out_type is not None:
             if out_type[0] == "n":
                 self.as_numpy(dtype=dtype)
@@ -162,7 +162,7 @@ class ObjDict(dict):
             elif WITH_TORCH and isinstance(self[key], torch.Tensor):
                 self[key] = self[key].cpu().clone().detach().numpy()
 
-    def as_torch(self, dtype="float32", device="cuda")-> None:
+    def as_torch(self, dtype="float32", device="cpu")-> None:
         """ converts all lists and ndarrays to torch tensor
             DOES not check array validity
             DOES not convert dimensionless data
@@ -180,7 +180,6 @@ class ObjDict(dict):
         for key in self:
             if isinstance(self[key], np.ndarray) or WITH_TORCH and isinstance(self[key], torch.Tensor):
                 self[key] = self[key].tolist()
-
 
 def _get_fullname(name):
     name = osp.expanduser(osp.abspath(name))
