@@ -1,4 +1,4 @@
-""" image / camera intrinsics
+""" image / camera intrinsics functions
 """
 import torch
 
@@ -60,8 +60,8 @@ def pix_to_rays(pix, center, focal, radial, tangential, ratio=1., skew=0, iters=
             step.div_(denom).where(denom.abs() > 1e-8, torch.zeros_like(xy))
             xy.add_(step)
 
-    shape = list(xy.shape[:2]) + [z]
-    out = torch.cat((xy, torch.ones(shape, dtype=xy.dtype, device=xy.device)), dim=-1)
+    shape = list(xy.shape[:2]) + [1]
+    out = torch.cat((xy, z * torch.ones(shape, dtype=xy.dtype, device=xy.device)), dim=-1)
     out.div_(out.norm(dim=-1, keepdim=True))
     return out
 
