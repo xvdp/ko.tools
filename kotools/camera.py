@@ -1,4 +1,5 @@
 """ image / camera intrinsics functions
+wip. options built to match various projects
 """
 import torch
 
@@ -24,7 +25,7 @@ def undistorted_rays(xy, xy0, ks, ps):
 
     return fxy, fx_xy, fy_xy
 
-def pix_to_rays(pix, center, focal, radial, tangential, ratio=1., skew=0, iters=10, z=1.0):
+def pix_to_rays(pix, center, focal, radial, tangential, ratio=1., skew=0, iters=10, z=1.0, normalize=True):
     """ image pixels to camera rays
     Args
         pix         tensor (h,w,2)
@@ -33,19 +34,18 @@ def pix_to_rays(pix, center, focal, radial, tangential, ratio=1., skew=0, iters=
         radial      tensor  [k1,k2,k3]  # if None: dont undistort
         tangential  tensor  [p1,p2]     # it None: dont undistort
     optional Args
-        ratio   float [1.] pixel aspect ratio
-        z       float [1.]: if -1 flip coordinates z and y
-        iters   int [10] ray optimization iterations
+        ratio       float [1.] pixel aspect ratio
+        z           float [1.]: if -1 flip coordinates z and y
+        iters       int [10] ray optimization iterations
+        normalize   bool [True]  normalize resulting rays
     """
-    xy = pix.sub(center).div_(focal)
-    if ratio != 1:
-        xy[..., 1].div_(ratio)
+    _as_tensor = {"device":pix.device, "dtype":pix.dtype}
+    xy = pix.sub(center).div(focal).mul(torch.tensor([1., z/ratio], **_as_tensor))
+
     if skew:
         if isinstance(focal, torch.tensor) and focal.dim() == 2:
             focal = focal[-1]
         xy[..., 0].sub_(xy[..., 1], alpha=skew/focal)
-    if z == -1: # flip coordinates
-        xy[...,1].mul_(-1)
 
     if radial is not None and tangential is not None and (any(radial) or any(tangential)):
         xy0 = xy.clone().detach()
@@ -61,8 +61,9 @@ def pix_to_rays(pix, center, focal, radial, tangential, ratio=1., skew=0, iters=
             xy.add_(step)
 
     shape = list(xy.shape[:2]) + [1]
-    out = torch.cat((xy, z * torch.ones(shape, dtype=xy.dtype, device=xy.device)), dim=-1)
-    out.div_(out.norm(dim=-1, keepdim=True))
+    out = torch.cat((xy, z * torch.ones(shape, **_as_tensor)), dim=-1)
+    if normalize:
+        out.div_(out.norm(dim=-1, keepdim=True))
     return out
 
 def rotate_rays(rays, rotation):

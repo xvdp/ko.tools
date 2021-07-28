@@ -1,30 +1,33 @@
 # kotools
 repository to collect some common tools i use to manage learning
+generally pytorch
 
-
-### logging
-`class Plog`         running log to collect to pandas csv <br>
-`class Col`          color print codes<br>
-
-### memory
-`class GPUse`        thin wrap around nvidia-smi <br>
-`class CPUse`        thin wrap around psutil.virtualmemory <br>
-`class ObjTrace`     GPU and CPU collection based on ObjDict <br>
 
 ### general
-`class ObjDict`       thin wrap on dictionary for accessing keys as objects, read and write to yaml and json <br>
-`sround(x, digits=1)` smart round, to highest digits <br>
-`deepclone(x)`        similar to deepcopy, converting torch tensors to cpu
+`ObjDict()`         class, thin wrap on Dict for accessing keys as objects, read and write to yaml and json <br>
+`sround()`          smart round, to highest digits <br>
+
+`deepclone()`       similar to deepcopy, clone and detach torch tensors to cpu <br>
+
+### logging
+`Plog()`            class, running log to collect to pandas csv <br>
+`Col()`             class, color print codes<br>
+
+### memory
+`GPUse()`           class, thin wrap around nvidia-smi <br>
+`CPUse()`           class, thin wrap around psutil.virtualmemory <br>
+`ObjTrace()`        class, GPU and CPU collection based on ObjDict <br>
 
 ### training 
-`class Schedule`    scheduler, linear, exponential, with noisy periodic functions
+`Schedule()`        scheduler class, linear, exponential, with noisy periodic functions <br>
 
 ### grids
-`np_mgrid`          fast n dimensional meshgrid with layout and column order options <br>
-`np_mgrid_pos`      grid indices <br>
-`torch_mgrid`       torch versions <br>
-`torch_mgrid_pos`
+`mgrid()`           fast n dim meshgrid with layout and column order options; as np `np_mgrid()` <br>
+`mgrid_pos()`       grid indices; as np `np_mgrid_pos()` <br>
 
 ### random sampling
-`np_unique_randint`      non repeating random ints
-`torch_unique_randint`
+`unique_randint()`  non repeating random ints (torch | numpy)<br>
+
+### cameras
+`pix_to_rays()`     pixels to rays given camera intrinsics (torch)<br>
+`rotate_rays()`     rotate rays by transform (torch)<br>
