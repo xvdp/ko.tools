@@ -10,7 +10,7 @@ def unique_randint(low, high, size, overflow=1.2, out_type="torch"):
         low         (int)
         high        (int)
         size        (int) < high - low
-        overflow    (float [1.2]) > 0
+        overflow    (float [1.2]) > 1
 
         out_type    (str ["torch"]) | "numpy"
     """
@@ -37,7 +37,7 @@ def _np_unique_randint(low, high, size, overflow=1.2):
         low         (int)
         high        (int)
         size        (int) < high - low
-        overflow    (float [1.2]) > 0
+        overflow    (float [1.2]) > 1
     """
     samples = np.unique(np.random.randint(low, high, int(size*overflow)))
     num_samples = len(samples)

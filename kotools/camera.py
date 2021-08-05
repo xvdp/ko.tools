@@ -71,5 +71,6 @@ def rotate_rays(rays, rotation):
     Args
         rays        tensor(...,3)
         rotation    tensor (3,3)
+            if row major: pass .T
     """
-    return (rotation.T @ rays.unsqueeze(-1)).squeeze(-1)
+    return (rotation @ rays.unsqueeze(-1)).squeeze(-1)

@@ -102,7 +102,7 @@ class PLog:
         self.len = len(dfl)
         self.columns = list(dfl.columns)
         if len(dfl) > abs(iloc):
-            self.values = dict(dfl.iloc[iloc])
+            self.values = {k: dfl[k].iloc[iloc] for k in dfl}
         if init:
             print(f"{self.name} found with len {self.len}\n{self.values}")
         return dfl
