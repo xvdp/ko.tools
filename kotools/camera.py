@@ -168,7 +168,7 @@ def copy_vals(fro, to, repeat=False):
         to      int, float, torch.Tensor
         fro     int, float, torch.Tensor, np.ndarray
     """
-
+    _grad = to.requires_grad
     if isinstance(to, (int, float)):
         to = type(to)(fro)
         print("intfloat")
@@ -183,7 +183,7 @@ def copy_vals(fro, to, repeat=False):
         elif isinstance(fro, torch.Tensor) and fro.shape == to.shape and not to.requires_grad:
             to = fro.clone().detach().to(**_asto)
         elif isinstance(fro, np.ndarray) and tuple(to.shape) == tuple(fro.shape):
-            to = torch.as_tensor(fro, requires_grad=to.requires_grad, **_asto)
+            to = torch.as_tensor(fro, **_asto)
         else:
             if isinstance(fro, np.ndarray):
                 fro = fro.reshape(-1)
@@ -193,6 +193,9 @@ def copy_vals(fro, to, repeat=False):
             for i in range(_len):
                 to[i] = fro[i%len(fro)].item()
             to = to.view(_shape)
+
+    to.requires_grad = _grad
+
 
 class Camera:
     """ camera intrinsics and extrinsics in pytorch
