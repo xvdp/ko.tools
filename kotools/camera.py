@@ -74,93 +74,81 @@ def pixels_to_rays(pixels, center, focal, radial=None, tangential=None, ratio=1.
         out = out.div(out.norm(dim=-1, keepdim=True))
     return out
 
-def rotate_rays(rays, rotation):
+def rotate_rays(rays, rotation, row_major=True):
     """
     Args
         rays        tensor (...,3)
-        rotation    tensor (3,3) # if row major: pass .T
+        rotation    tensor (3,3)
+        TODO: check validity of row_major
     """
+    if row_major:
+        return (rotation.T @ rays.unsqueeze(-1)).squeeze(-1)
     return (rotation @ rays.unsqueeze(-1)).squeeze(-1)
 
 
-def transform_points(points, position=None, rotation=None):
+def transform_points(points, position=None, rotation=None, row_major=False):
     """
     Args
         points      tensor (...,3)
-        position    tensor (1, 3) 
-        rotation    tensor (3, 3) if row major: pass .T
+        position    tensor (1, 3)
+        rotation    tensor (3, 3)
+        row_major   bool [False], if True: rotation.T
+        TODO: check validity of row_major
     """
     if position is not None:
         points = points - position
     if rotation is not None:
-        points = (rotation @ points.T).T
+        if row_major:
+            points = (rotation.T @ points.T).T
+        else:
+            points = (rotation @ points.T).T
     return points
 
-
-def points_to_pixels(points, center, focal, radial=None, tangential=None, ratio=1., skew=0, position=None, rotation=None):
+def points_to_pixels(points, center, focal, radial=None, tangential=None,
+                     ratio=1., skew=0, position=None, rotation=None, row_major=False):
     """Projects a 3D point (x,y,z) to a pixel position (x,y).
+    out tensor (..., 2)
      Args
-        points      tensor (...,3)
+        points      tensor (..., 3)
+
+    intrinsics
+        center      tensor (2)          [cx, cy] principal_point
+        focal       float | tensor(2)   [fx, fy] focal_
+
+        ratio       float (1.) TODO, check, part of focal
+        skew        0
+
+        radial      tensor  [k1, k2, k3]
+        tangential  tensor  [p1, p2]
+
+    extrinsics
         position    tensor (1, 3)
-        rotation    tensor (3, 3) if row major: pass .T
-
-        center      tensor (2)          [cx,cy] principal_point
-        focal       float | tensor(2)   [fx,fy] focal_
-
-        radial      tensor  [k1,k2,k3]  # if None: dont undistort
-        tangential  tensor  [p1,p2]     # it None: dont undistort
+        rotation    tensor (3, 3)
+        row_major   bool [False], if True: rotation.T
     """
-    batch_shape = points.shape[:-1]
+    _shape = points.shape[:-1]
     points = points.view(-1, 3)
-    points = transform_points(points, position, rotation)
+    points = transform_points(points, position, rotation, row_major=row_major)
+
     _as_tensor = {"device":points.device, "dtype":points.dtype}
     ratio = torch.tensor([1., ratio], **_as_tensor)
 
     xy = points[..., 0:2]/points[..., 2:3]
     if radial is not None and tangential is not None and (any(radial) or any(tangential)):
-    
+
         # Radial distortion.
         r2 = torch.sum(xy**2, axis=-1, keepdims=True)
         xy.mul_(1.0 + r2 * (radial[0] + r2 * (radial[1] + radial[2] * r2)))
 
         # Tangential distorsion
-        xy.add_(2.0 * tangential * xy.prod(axis=-1) + tangential.filp(-1) * (r2 + 2.0 * xy**2))
+        xy.add_(2.0 * tangential * xy.prod(axis=-1, keepdims=True) +
+                tangential.flip(-1) * (r2 + 2.0 * xy**2))
 
         # Map to image plane
         xy[..., 0].add_(xy[..., 1].mul(skew))
         xy.mul_(ratio*focal).add_(center)
 
-    return xy.reshape((*batch_shape, 2))
-
-        # torch.tensor([1., ratio], **_as_tensor)
-        # pixels = center - xy
-
-        # xy = pixels.sub(center).div(focal).mul(torch.tensor([1., z/ratio], **_as_tensor))
-
-    # Get normalized local pixel positions.
-    # x = points[..., 0] / points[..., 2]
-    # y = points[..., 1] / points[..., 2]
-    # r2 = x**2 + y**2
-
-
-
-    # if radial is not None and tangential is not None and (any(radial) or any(tangential)):
-    #     # Apply radial distortion.
-    #     distortion = 1.0 + r2 * (radial[0] + r2 * (radial[1] + radial[2] * r2))
-
-        # Apply tangential distortion.
-        # x_times_y = x * y
-        # x = x * distortion + 2.0 * tangential[0] * x_times_y + tangential[1] * (r2 + 2.0 * x**2)
-        # y = y * distortion + 2.0 * tangential[1] * x_times_y + tangential[0] * (r2 + 2.0 * y**2)
-
-        # # Map the distorted ray to the image plane and return the depth.
-        # pixel_x = focal * x         + center[0] + skew * y
-        # pixel_y = focal * y * ratio + center[1]
-
-        # pixels = torch.stack([pixel_x, pixel_y], axis=-1)
-
-    # return pixels.reshape((*batch_shape, 2))
-
+    return xy.reshape((*_shape, 2))
 
 def copy_vals(fro, to, repeat=False):
     """ copies into tensor
@@ -171,7 +159,6 @@ def copy_vals(fro, to, repeat=False):
     _grad = to.requires_grad
     if isinstance(to, (int, float)):
         to = type(to)(fro)
-        print("intfloat")
 
     elif isinstance(to, torch.Tensor):
         _asto = {"dtype":to.dtype, "device":to.device}
@@ -183,7 +170,7 @@ def copy_vals(fro, to, repeat=False):
         elif isinstance(fro, torch.Tensor) and fro.shape == to.shape and not to.requires_grad:
             to = fro.clone().detach().to(**_asto)
         elif isinstance(fro, np.ndarray) and tuple(to.shape) == tuple(fro.shape):
-            to = torch.as_tensor(fro, **_asto)
+            to[:] = torch.as_tensor(fro, **_asto)
         else:
             if isinstance(fro, np.ndarray):
                 fro = fro.reshape(-1)
@@ -191,7 +178,9 @@ def copy_vals(fro, to, repeat=False):
             to = to.view(-1)
             _len = len(fro) if repeat else min(len(to), len(fro))
             for i in range(_len):
-                to[i] = fro[i%len(fro)].item()
+                _val = fro[i%len(fro)]
+                _val = _val if isinstance(_val, (int, float)) else _val.item()
+                to[i] = _val
             to = to.view(_shape)
 
     to.requires_grad = _grad
@@ -199,6 +188,19 @@ def copy_vals(fro, to, repeat=False):
 
 class Camera:
     """ camera intrinsics and extrinsics in pytorch
+    kwargs:
+        intrinsics as
+            center, focal, radial, tangential
+        or
+            cx, cy, fx, fy, k1, k2, k3, p1, p2
+
+        height, width, position, rotation
+    Examples:
+    >>> Cam = Camera(position=[34,4,2], rotation=[1,0,0,0,1,0,0,0,1])
+    >>> Cam = Camera()
+    >>> Cam.from_colmap_scene(pycolmap.scene)
+    >>> ...
+    >>> Cam.to(device="cuda")
     """
     def __init__(self, **kwargs):
         _x = 100.0
@@ -214,6 +216,13 @@ class Camera:
 
         self.from_keyvalues(**kwargs)
 
+    def __repr__(self):
+        rep = self.__class__.__name__+"("
+        for i, k in enumerate(self.__dict__):
+            rep += "\n  " + k + "=" + str(self.__dict__[k])
+        rep += "\n)"
+        return rep
+
     def to(self, **kwargs):
         """
             kwargs
@@ -224,7 +233,7 @@ class Camera:
 
         for x in self.__dict__:
             if isinstance(self.__dict__[x], torch.Tensor):
-                self.__dict__[x].to(**_to)
+                self.__dict__[x] = self.__dict__[x].to(**_to)
 
 
     def from_keyvalues(self, **kwargs):
@@ -293,7 +302,7 @@ class Camera:
             self.width = cam.width
 
         if img is not None:
-            copy_vals(img.t, self.position)
+            copy_vals(img.C(), self.position)
             copy_vals(img.R(), self.rotation)
 
     def from_colmap_scene(self, scene, index):
