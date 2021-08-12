@@ -21,7 +21,7 @@ def setup_package():
 
     metadata = dict(
         name='kotools',
-        version=set_version(version='0.0.2'),
+        version=set_version(version='0.0.3'),
         description='common learning tools',
         url='https://github.com/xvdp/kotools',
         author='xvdp',

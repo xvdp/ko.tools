@@ -182,18 +182,20 @@ def copy_vals(fro, to, repeat=False):
                 to[0] = fro
         elif isinstance(fro, torch.Tensor) and fro.shape == to.shape and not to.requires_grad:
             to = fro.clone().detach().to(**_asto)
-            print("clone t")
-        elif isinstance(to, np.ndarray) and tuple(to.shape) == tuple(fro.shape):
+        elif isinstance(fro, np.ndarray) and tuple(to.shape) == tuple(fro.shape):
             to = torch.as_tensor(fro, requires_grad=to.requires_grad, **_asto)
         else:
+            if isinstance(fro, np.ndarray):
+                fro = fro.reshape(-1)
+            _shape = to.shape
+            to = to.view(-1)
             _len = len(fro) if repeat else min(len(to), len(fro))
             for i in range(_len):
                 to[i] = fro[i%len(fro)].item()
-            print("copy items")
-
+            to = to.view(_shape)
 
 class Camera:
-    """ camera intrinsics and extrinsics in pytoch
+    """ camera intrinsics and extrinsics in pytorch
     """
     def __init__(self, **kwargs):
         _x = 100.0
@@ -205,9 +207,22 @@ class Camera:
         self.width = _x
 
         self.position = torch.zeros(3)
-        self.rotation = torch.eye(3,3)
+        self.rotation = torch.eye(3, 3)
 
         self.from_keyvalues(**kwargs)
+
+    def to(self, **kwargs):
+        """
+            kwargs
+                device  (str) ['cuda' | 'cpu']
+                dtype   (torch.dtype)
+        """
+        _to = {k:kwargs[k] for k in kwargs if k in ("device", "dtype")}
+
+        for x in self.__dict__:
+            if isinstance(self.__dict__[x], torch.Tensor):
+                self.__dict__[x].to(**_to)
+
 
     def from_keyvalues(self, **kwargs):
         """ intrinsics can be either in the form
@@ -240,6 +255,8 @@ class Camera:
                 self.focal[1] = kwargs[key]
 
     def to_keyvalues(self):
+        """ outputs obj dict in opencv format
+        """
         out = ObjDict()
         out.k1 = self.radial[0]
         out.k2 = self.radial[1]
@@ -252,19 +269,35 @@ class Camera:
         out.fy = self.focal[1]
         out.height = self.height
         out.width = self.width
+        return out
 
-    def from_pycolmap(self, cam):
+    def from_colmap(self, cam=None, img=None):
         """
         Args
-            cam     pycolmap class
+            cam     pycolmap.scene.cameras[i]
+            img     pycolmap.scene.images[j]
         """
-        self.center[0] = cam.cx
-        self.center[1] = cam.cy
-        self.focal[0] = cam.fx
-        self.focal[1] = cam.fy
-        self.radial[0] = cam.k1
-        self.radial[1] = cam.k2
-        self.tangential[0] = cam.p1
-        self.tangential[1] = cam.p2
-        self.height = cam.height
-        self.width = cam.width
+        if cam is not None:
+            self.center[0] = cam.cx
+            self.center[1] = cam.cy
+            self.focal[0] = cam.fx
+            self.focal[1] = cam.fy
+            self.radial[0] = cam.k1
+            self.radial[1] = cam.k2
+            self.tangential[0] = cam.p1
+            self.tangential[1] = cam.p2
+            self.height = cam.height
+            self.width = cam.width
+
+        if img is not None:
+            copy_vals(img.t, self.position)
+            copy_vals(img.R(), self.rotation)
+
+    def from_colmap_scene(self, scene, index):
+        """
+        Args
+            scene   (pycolmap scene)
+            index   (int) scene.images[index]
+        """
+        self.from_colmap(cam=scene.cameras[scene.images[index].camera_id],
+                         img=scene.images[index])

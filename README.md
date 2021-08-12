@@ -29,5 +29,7 @@ generally pytorch
 `unique_randint()`  non repeating random ints (torch | numpy)<br>
 
 ### cameras
-`pix_to_rays()`     pixels to rays given camera intrinsics (torch)<br>
+`pixels_to_rays()`  pixels to rays given camera intrinsics (torch)<br>
+`points_to_pixels()`pixels to rays given camera intrinsics (torch)<br>
 `rotate_rays()`     rotate rays by transform (torch)<br>
+`Camera()`          camera class, io, intrinsics, extrinsics (torch)
