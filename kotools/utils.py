@@ -2,6 +2,7 @@
     ObjDict     object access dictionary
     TraceMem    ObjDict collecting memory usage
     GPUse       thin wrap of nvidia-smi
+        TODO replace with nvml
     CPUse       thin wrap of psutils
 """
 from typing import Any
@@ -93,11 +94,6 @@ class ObjDict(dict):
     def __delattr__(self, name: str) -> None:
         del self[name]
 
-    def _blank(self)-> None:
-        keys = list(self.keys())
-        for k in keys:
-            del self[k]
-
     def to_yaml(self, name)-> None:
         """ save to yaml"""
         with open(name, 'w') as _fi:
@@ -114,7 +110,7 @@ class ObjDict(dict):
         """
         name = _get_fullname(name)
         if not update:
-            self._blank()
+            self.clear()
         with open(name, 'r') as _fi:
             _dict = yaml.load(_fi, Loader=_get_yaml_loader())
             self.update(_dict)
@@ -136,7 +132,7 @@ class ObjDict(dict):
                 device  (str ['cuda']) | 'cpu'
         """
         if not update:
-            self._blank()
+            self.clear()
         with open(name, 'r') as _fi:
             _dict = json.load(_fi)
             self.update(_dict)
