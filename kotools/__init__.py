@@ -1,11 +1,13 @@
 """ @xvdp """
+import logging
 from .version import __version__
+
 WITH_TORCH = True
 try:
     import torch
 except:
     WITH_TORCH = False
-    print("pytorch not found, only numpy functions loaded")
+    logging.warning("{} pytorch not found, only numpy functions loaded...{}".format('\033[93m\033[1m', '\033[0m'))
 
 from .utils import DeepClone, deepclone, ObjDict, ObjTrace, TraceMem, GPUse, CPUse
 from .log import Col, PLog, sround, plotlog
