@@ -1,7 +1,8 @@
 absl-py>=0.10
+matplotlib>=3
 numpy>=1.15
 nvidia-ml-py>=11.0
 pandas>=1
-psutil
+psutil>=5
 pytest>=6
 pyyaml>=5
