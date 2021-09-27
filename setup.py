@@ -1,16 +1,16 @@
 """@xvdp
 """
 import setuptools
-
 from setuptools import setup, find_packages
-
+import os.path as osp
 
 def readme():
     with open('README.md') as _fo:
         return _fo.read()
 
 def requirements():
-    with open('requirements.txt') as _fo:
+    req = osp.join(osp.split(__file__)[0], 'requirements.txt')
+    with open(req) as _fo:
         return _fo.read().split()
 
 # def set_version(version):
