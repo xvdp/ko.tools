@@ -1,6 +1,8 @@
 """ random utilities """
 import numpy as np
-import torch
+from kotools import WITH_TORCH
+if WITH_TORCH:
+    import torch
 
 # pylint: disable=no-member
 
@@ -16,6 +18,8 @@ def unique_randint(low, high, size, overflow=1.2, out_type="torch"):
     """
     assert size < high - low, "size needs to be smaller than range"
     assert overflow > 1
+    if not WITH_TORCH:
+        out_type = "numpy"
     if out_type[0] == "n":
         return _np_unique_randint(low, high, size, overflow=1.2)
 

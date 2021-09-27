@@ -1,7 +1,10 @@
 """ applies lut without having to do matplotib.
 """
+
 import numpy as np
-import torch
+from kotools import WITH_TORCH
+if WITH_TORCH:
+    import torch
 
 # pylint: disable=no-member
 norm = lambda x: (x-x.min())/(x.max()-x.min())
@@ -18,7 +21,7 @@ def apply_cmap(image, cmap="inferno", form="numpy", dtype="float32"):
     return cmaps[cmap](form=form, dtype=dtype)[temp]
 
 def _format_cmap(values, form="numpy", dtype="float32"):
-    if form[0] in ("p", "t"):
+    if form[0] in ("p", "t") and WITH_TORCH:
         values = torch.as_tensor(values, dtype=torch.__dict__[dtype])
     else:
         values = np.asarray(values, dtype=dtype)
@@ -26,7 +29,7 @@ def _format_cmap(values, form="numpy", dtype="float32"):
 
 def _gray(form="numpy", dtype="float32"):
     data = (np.tile(np.linspace(0,1, 256), (3,1)).T).astype(dtype)
-    if form[0] in ("p", "t"):
+    if form[0] in ("p", "t") and WITH_TORCH:
         data = torch.as_tensor(data)
     return data
 

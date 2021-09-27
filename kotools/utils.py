@@ -15,11 +15,9 @@ import psutil
 import numpy as np
 import yaml
 
-WITH_TORCH = True
-try:
+from kotools import WITH_TORCH
+if WITH_TORCH:
     import torch
-except:
-    WITH_TORCH = False
 
 __all__ = ["ObjDict", "TraceMem", "GPUse", "CPUse"]
 
