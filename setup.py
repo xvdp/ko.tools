@@ -43,14 +43,16 @@ setuptools.setup(
     name='kotools',
     version="0.0.4",
     author="xvdp",
+    license='MIT',
+    install_requires=requirements(),
     description='kotools, spome common learning tools',
     long_description=readme(),
     url='https://github.com/xvdp/kotools',
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    tests_require=["pytest"],
     python_requires='>=3.6',
 )
