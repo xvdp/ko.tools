@@ -1,11 +1,10 @@
-# kotools
-repository to collect some common tools i use to manage learning
-generally pytorch
+# koreto
+Repo collecting some common tools for pytorch and numpy. Changed the name to これと, kore to, "this and..." to reflect the incomplete nature of this project.
 
 
 ### general
-`ObjDict()`         class, thin wrap on Dict for accessing keys as objects, read and write to yaml and json <br>
-`sround()`          smart round, to highest digits <br>
+`ObjDict()`         class, thin wrap on Dict for accessing keys as object attributes, with rw to yaml and json <br>
+`sround()`          'smart round', to highest digits <br>
 
 `deepclone()`       similar to deepcopy, clone and detach torch tensors to cpu <br>
 
@@ -22,14 +21,14 @@ generally pytorch
 `Schedule()`        scheduler class, linear, exponential, with noisy periodic functions <br>
 
 ### grids
-`mgrid()`           fast n dim meshgrid with layout and column order options; as np `np_mgrid()` <br>
-`mgrid_pos()`       grid indices; as np `np_mgrid_pos()` <br>
+`mgrid()`           fast n dim meshgrid with layout and column order options (torch | numpy) <br>
+`mgrid_pos()`       grid indices (torch | numpy) <br>
 
 ### random sampling
-`unique_randint()`  non repeating random ints (torch | numpy)<br>
+`unique_randint()`  non repeating random ints (torch | numpy) <br>
 
 ### cameras
-*Camera functions only built for pytorch* <br>
+*pytorch only* <br>
 `pixels_to_rays()`  pixels to rays given camera intrinsics (torch)<br>
 `points_to_pixels()`pixels to rays given camera intrinsics (torch)<br>
 `rotate_rays()`     rotate rays by transform (torch)<br>
