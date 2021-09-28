@@ -1,7 +1,7 @@
 """ mesh grids
 """
 import numpy as np
-from kotools import WITH_TORCH
+from koreto import WITH_TORCH
 if WITH_TORCH:
     import torch
 

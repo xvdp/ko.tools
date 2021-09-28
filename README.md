@@ -4,7 +4,7 @@ Repo collecting some common tools for pytorch and numpy. Changed the name to こ
 
 ### general
 `ObjDict()`         class, thin wrap on Dict for accessing keys as object attributes, with rw to yaml and json <br>
-`sround()`          'smart round', to highest digits, inputs<br>
+`sround()`          'smart round', to highest digits, inputs float or list, tuple, ndarray<br>
 
 `deepclone()`       similar to deepcopy, clone and detach torch tensors to cpu <br>
 

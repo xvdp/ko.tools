@@ -15,7 +15,7 @@ import psutil
 import numpy as np
 import yaml
 
-from kotools import WITH_TORCH
+from koreto import WITH_TORCH
 if WITH_TORCH:
     import torch
 

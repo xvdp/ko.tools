@@ -3,6 +3,7 @@ simple loggers
 * pands train logger
 * plot train logger
 """
+from typing import Any, Union
 import sys
 import datetime
 import os
@@ -16,7 +17,7 @@ from .utils import ObjDict
 
 
 __all__ = ["sround", "Col", "PLog", "plotlog"]
-def sround(x, digits=1):
+def sround(x: Union[np.ndarray, float, list, tuple], digits: int=1) -> Any:
     """ 'smart' round to largest `digits` + 1
     Args
         x       (float, list, tuple, ndarray)
