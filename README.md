@@ -4,7 +4,7 @@ Repo collecting some common tools for pytorch and numpy. Changed the name to こ
 
 ### general
 `ObjDict()`         class, thin wrap on Dict for accessing keys as object attributes, with rw to yaml and json <br>
-`sround()`          'smart round', to highest digits <br>
+`sround()`          'smart round', to highest digits, inputs<br>
 
 `deepclone()`       similar to deepcopy, clone and detach torch tensors to cpu <br>
 
@@ -28,8 +28,8 @@ Repo collecting some common tools for pytorch and numpy. Changed the name to こ
 `unique_randint()`  non repeating random ints (torch | numpy) <br>
 
 ### cameras
-*pytorch only* <br>
-`pixels_to_rays()`  pixels to rays given camera intrinsics (torch)<br>
-`points_to_pixels()`pixels to rays given camera intrinsics (torch)<br>
-`rotate_rays()`     rotate rays by transform (torch)<br>
-`Camera()`          camera class, io, intrinsics, extrinsics (torch)
+*pytorch only, partial port from nerfies jax code* <br>
+`pixels_to_rays()`  pixels to rays given camera intrinsics <br>
+`points_to_pixels()`pixels to rays given camera intrinsics<br>
+`rotate_rays()`     rotate rays by transform<br>
+`Camera()`          camera class, io, intrinsics, extrinsics
