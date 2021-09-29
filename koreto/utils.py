@@ -5,7 +5,7 @@
         TODO replace with nvml
     CPUse       thin wrap of psutils
 """
-from typing import Any
+from typing import TypeVar, Any, NoReturn, Union
 import subprocess as sp
 from copy import deepcopy
 import os
@@ -20,6 +20,7 @@ if WITH_TORCH:
     import torch
 
 __all__ = ["ObjDict", "TraceMem", "GPUse", "CPUse"]
+_T = TypeVar('_T')
 
 # pylint: disable=no-member
 # ###
@@ -29,6 +30,8 @@ class DeepClone:
     """ similar to deep copy detaching tensors to cpu
         self.out    cloned data
         self.stats  counter of classes cloned
+    TODO deepclone only detaches tensors on first level, need to make recursive
+    TODO write tests, this has too many failure points possible
     """
     def __init__(self, data, cpu=True):
         self._cpu = cpu
@@ -36,7 +39,7 @@ class DeepClone:
         self.stats = {}
         self.out = self.clone(data)
 
-    def clone(self, data):
+    def clone(self, data: _T) -> _T:
         _type = data.__class__
         if _type not in self.stats:
             self.stats[_type] = 0
@@ -44,6 +47,7 @@ class DeepClone:
 
         if isinstance(data, dict):
             return self.clone_dict(data)
+
         if isinstance(data, (list, tuple)):
             return self.clone_list(data)
         if WITH_TORCH and isinstance(data, torch.Tensor):
@@ -54,17 +58,17 @@ class DeepClone:
         else:
             return deepcopy(data)
 
-    def clone_dict(self, data):
+    def clone_dict(self, data: dict) -> dict:
         out = data.__class__()
         for k in data:
             out[k] = self.clone(data[k])
         return out
 
     def clone_list(self, data):
-        """ lists and tuples - should handle iterables generally"""
+        """ lists and tuples - fix typing"""
         return data.__class__(self.clone(d) for d in data)
 
-def deepclone(data):
+def deepclone(data: _T) -> _T :
     """ similar to deep copy detaching tensors to cpu
             out = deepclone(data)
     """
@@ -86,18 +90,25 @@ class ObjDict(dict):
         except KeyError:
             raise AttributeError(name)
 
-    def __setattr__(self, name: str, value: Any) -> None:
+    def __setattr__(self, name: str, value: Any) -> NoReturn:
         self[name] = value
 
-    def __delattr__(self, name: str) -> None:
+    def __delattr__(self, name: str) -> NoReturn:
         del self[name]
 
-    def to_yaml(self, name)-> None:
+    def copyobj(self):
+        """ .copy() returns a dict, not ObjDict"""
+        return ObjDict(self.copy())
+
+    def deepcopy(self):
+        return deepcopy(self)
+
+    def to_yaml(self, name:str)-> None:
         """ save to yaml"""
         with open(name, 'w') as _fi:
             yaml.dump(dict(self), _fi)
 
-    def from_yaml(self, name, update=False, out_type=None, **kwargs)-> None:
+    def from_yaml(self, name:str, update:bool=False, out_type:str=None, **kwargs)-> NoReturn:
         """ load yaml to dictionary
         Args
             update      (bool [False]) False overwrites, True appends
@@ -114,13 +125,13 @@ class ObjDict(dict):
             self.update(_dict)
         self._as_type(out_type, **kwargs)
 
-    def to_json(self, name)-> None:
+    def to_json(self, name: str)-> NoReturn:
         """save to json"""
         name = _get_fullname(name)
         with open(name, 'w') as _fi:
             json.dump(dict(self), _fi)
 
-    def from_json(self, name, update=False, out_type=None, **kwargs)-> None:
+    def from_json(self, name: str, update: bool=False, out_type: str=None, **kwargs)-> NoReturn:
         """load json to dictionary
         Args
             update      (bool [False]) False overwrites, True appends
@@ -136,7 +147,7 @@ class ObjDict(dict):
             self.update(_dict)
         self._as_type(out_type, **kwargs)
 
-    def _as_type(self, out_type=None, **kwargs):
+    def _as_type(self, out_type: str=None, **kwargs)-> NoReturn:
         dtype = "float32" if "dtype" not in kwargs else kwargs["dtype"]
         device = "cpu" if "device" not in kwargs else kwargs["device"]
         if out_type is not None:
@@ -145,7 +156,7 @@ class ObjDict(dict):
             elif out_type[0] in ('p', 't'):
                 self.as_torch(dtype=dtype, device=device)
 
-    def as_numpy(self, dtype="float32")-> None:
+    def as_numpy(self, dtype: str="float32")-> NoReturn:
         """ converts lists and torch tensors to numpy array
             DOES not check array validity
         """
@@ -156,7 +167,7 @@ class ObjDict(dict):
             elif WITH_TORCH and isinstance(self[key], torch.Tensor):
                 self[key] = self[key].cpu().clone().detach().numpy()
 
-    def as_torch(self, dtype="float32", device="cpu")-> None:
+    def as_torch(self, dtype: str="float32", device: str="cpu")-> NoReturn:
         """ converts all lists and ndarrays to torch tensor
             DOES not check array validity
             DOES not convert dimensionless data
@@ -167,7 +178,7 @@ class ObjDict(dict):
             if isinstance(self[key], (list, tuple, np.ndarray)):
                 self[key] = torch.as_tensor(self[key], dtype=dtype, device=device)
 
-    def as_list(self)-> None:
+    def as_list(self)-> NoReturn:
         """ converts all tensors and ndarrays to list
         # will fail on dimensionless
         """
@@ -175,7 +186,7 @@ class ObjDict(dict):
             if isinstance(self[key], np.ndarray) or WITH_TORCH and isinstance(self[key], torch.Tensor):
                 self[key] = self[key].tolist()
 
-def _get_fullname(name):
+def _get_fullname(name: str) -> str:
     name = osp.expanduser(osp.abspath(name))
     os.makedirs(osp.split(name)[0], exist_ok=True)
     return name
@@ -194,18 +205,6 @@ class ObjTrace(ObjDict):
     """ dict with object access
         delta function for iterable members
     """
-    def __getattr__(self, name: str) -> Any:
-        try:
-            return self[name]
-        except KeyError:
-            raise AttributeError(name)
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        self[name] = value
-
-    def __delattr__(self, name: str) -> None:
-        del self[name]
-
     def delta(self, name, i=-1, j=-2):
         """ return self[name][i] - self[name][j]"""
         assert isinstance(self[name], (tuple, list, np.ndarray)), "cannot delta type {}".format(type(self[name]))

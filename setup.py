@@ -24,7 +24,7 @@ def build_packages():
     """ setup """
     setup(
         name='koreto',
-        version=_set_version("0.0.4"),
+        version=_set_version("0.0.5"),
         author="xvdp",
         url='https://github.com/xvdp/koreto',
         license='MIT',
