@@ -5,7 +5,7 @@
         TODO replace with nvml
     CPUse       thin wrap of psutils
 """
-from typing import TypeVar, Any, NoReturn, Union
+from typing import TypeVar, Any, Union
 import subprocess as sp
 from copy import deepcopy
 import os
@@ -25,7 +25,19 @@ _T = TypeVar('_T')
 # pylint: disable=no-member
 # ###
 # Dictionaries and Memory management
-# 
+#
+class IPP:
+    """ i++ for a namespace"""
+    def __init__(self, i=0):
+        self.i = i
+    @property
+    def pp(self):
+        self.i += 1
+        return self.i - 1
+    def p(self, j=1):
+        self.i += j
+        return self.i - j
+
 class DeepClone:
     """ similar to deep copy detaching tensors to cpu
         self.out    cloned data
@@ -33,7 +45,7 @@ class DeepClone:
     TODO deepclone only detaches tensors on first level, need to make recursive
     TODO write tests, this has too many failure points possible
     """
-    def __init__(self, data, cpu=True):
+    def __init__(self, data: Any, cpu: bool=True) -> None:
         self._cpu = cpu
         self.out = None
         self.stats = {}
@@ -64,7 +76,7 @@ class DeepClone:
             out[k] = self.clone(data[k])
         return out
 
-    def clone_list(self, data):
+    def clone_list(self, data: list) -> list:
         """ lists and tuples - fix typing"""
         return data.__class__(self.clone(d) for d in data)
 
@@ -90,10 +102,10 @@ class ObjDict(dict):
         except KeyError:
             raise AttributeError(name)
 
-    def __setattr__(self, name: str, value: Any) -> NoReturn:
+    def __setattr__(self, name: str, value: Any) -> None:
         self[name] = value
 
-    def __delattr__(self, name: str) -> NoReturn:
+    def __delattr__(self, name: str) -> None:
         del self[name]
 
     def copyobj(self):
@@ -108,7 +120,7 @@ class ObjDict(dict):
         with open(name, 'w') as _fi:
             yaml.dump(dict(self), _fi)
 
-    def from_yaml(self, name:str, update:bool=False, out_type:str=None, **kwargs)-> NoReturn:
+    def from_yaml(self, name:str, update:bool=False, out_type:str=None, **kwargs)-> None:
         """ load yaml to dictionary
         Args
             update      (bool [False]) False overwrites, True appends
@@ -125,13 +137,13 @@ class ObjDict(dict):
             self.update(_dict)
         self._as_type(out_type, **kwargs)
 
-    def to_json(self, name: str)-> NoReturn:
+    def to_json(self, name: str)-> None:
         """save to json"""
         name = _get_fullname(name)
         with open(name, 'w') as _fi:
             json.dump(dict(self), _fi)
 
-    def from_json(self, name: str, update: bool=False, out_type: str=None, **kwargs)-> NoReturn:
+    def from_json(self, name: str, update: bool=False, out_type: str=None, **kwargs)-> None:
         """load json to dictionary
         Args
             update      (bool [False]) False overwrites, True appends
@@ -147,7 +159,7 @@ class ObjDict(dict):
             self.update(_dict)
         self._as_type(out_type, **kwargs)
 
-    def _as_type(self, out_type: str=None, **kwargs)-> NoReturn:
+    def _as_type(self, out_type: str=None, **kwargs)-> None:
         dtype = "float32" if "dtype" not in kwargs else kwargs["dtype"]
         device = "cpu" if "device" not in kwargs else kwargs["device"]
         if out_type is not None:
@@ -156,7 +168,7 @@ class ObjDict(dict):
             elif out_type[0] in ('p', 't'):
                 self.as_torch(dtype=dtype, device=device)
 
-    def as_numpy(self, dtype: str="float32")-> NoReturn:
+    def as_numpy(self, dtype: str="float32")-> None:
         """ converts lists and torch tensors to numpy array
             DOES not check array validity
         """
@@ -167,7 +179,7 @@ class ObjDict(dict):
             elif WITH_TORCH and isinstance(self[key], torch.Tensor):
                 self[key] = self[key].cpu().clone().detach().numpy()
 
-    def as_torch(self, dtype: str="float32", device: str="cpu")-> NoReturn:
+    def as_torch(self, dtype: str="float32", device: str="cpu")-> None:
         """ converts all lists and ndarrays to torch tensor
             DOES not check array validity
             DOES not convert dimensionless data
@@ -178,7 +190,7 @@ class ObjDict(dict):
             if isinstance(self[key], (list, tuple, np.ndarray)):
                 self[key] = torch.as_tensor(self[key], dtype=dtype, device=device)
 
-    def as_list(self)-> NoReturn:
+    def as_list(self)-> None:
         """ converts all tensors and ndarrays to list
         # will fail on dimensionless
         """

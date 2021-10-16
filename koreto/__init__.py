@@ -9,7 +9,7 @@ except:
     WITH_TORCH = False
     logging.warning("{} pytorch not found, only numpy functions loaded...{}".format('\033[93m\033[1m', '\033[0m'))
 
-from .utils import DeepClone, deepclone, ObjDict, ObjTrace, TraceMem, GPUse, CPUse
+from .utils import DeepClone, deepclone, ObjDict, ObjTrace, TraceMem, GPUse, CPUse, IPP
 from .log import Col, PLog, sround, plotlog
 from .scheduling import Schedule
 from .grids import  mgrid, mgrid_pos, np_mgrid, np_mgrid_pos
