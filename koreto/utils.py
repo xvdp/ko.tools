@@ -5,13 +5,11 @@
         TODO replace with nvml
     CPUse       thin wrap of psutils
 """
-from typing import TypeVar, Any, Union
-import subprocess as sp
+from typing import TypeVar, Any
 from copy import deepcopy
 import os
 import os.path as osp
 import json
-import psutil
 import numpy as np
 import yaml
 
@@ -19,7 +17,6 @@ from koreto import WITH_TORCH
 if WITH_TORCH:
     import torch
 
-__all__ = ["ObjDict", "TraceMem", "GPUse", "CPUse"]
 _T = TypeVar('_T')
 
 # pylint: disable=no-member
@@ -108,11 +105,11 @@ class ObjDict(dict):
     def __delattr__(self, name: str) -> None:
         del self[name]
 
-    def copyobj(self):
+    def copyobj(self: _T) -> _T :
         """ .copy() returns a dict, not ObjDict"""
         return ObjDict(self.copy())
 
-    def deepcopy(self):
+    def deepcopy(self: _T) -> _T :
         return deepcopy(self)
 
     def to_yaml(self, name:str)-> None:
@@ -120,7 +117,7 @@ class ObjDict(dict):
         with open(name, 'w') as _fi:
             yaml.dump(dict(self), _fi)
 
-    def from_yaml(self, name:str, update:bool=False, out_type:str=None, **kwargs)-> None:
+    def from_yaml(self, name:str, update:bool=False, out_type:str=None, **kwargs) -> None:
         """ load yaml to dictionary
         Args
             update      (bool [False]) False overwrites, True appends
@@ -137,13 +134,13 @@ class ObjDict(dict):
             self.update(_dict)
         self._as_type(out_type, **kwargs)
 
-    def to_json(self, name: str)-> None:
+    def to_json(self, name: str) -> None:
         """save to json"""
         name = _get_fullname(name)
         with open(name, 'w') as _fi:
             json.dump(dict(self), _fi)
 
-    def from_json(self, name: str, update: bool=False, out_type: str=None, **kwargs)-> None:
+    def from_json(self, name: str, update: bool=False, out_type: str=None, **kwargs) -> None:
         """load json to dictionary
         Args
             update      (bool [False]) False overwrites, True appends
@@ -159,7 +156,7 @@ class ObjDict(dict):
             self.update(_dict)
         self._as_type(out_type, **kwargs)
 
-    def _as_type(self, out_type: str=None, **kwargs)-> None:
+    def _as_type(self, out_type: str=None, **kwargs) -> None:
         dtype = "float32" if "dtype" not in kwargs else kwargs["dtype"]
         device = "cpu" if "device" not in kwargs else kwargs["device"]
         if out_type is not None:
@@ -168,7 +165,7 @@ class ObjDict(dict):
             elif out_type[0] in ('p', 't'):
                 self.as_torch(dtype=dtype, device=device)
 
-    def as_numpy(self, dtype: str="float32")-> None:
+    def as_numpy(self, dtype: str="float32") -> None:
         """ converts lists and torch tensors to numpy array
             DOES not check array validity
         """
@@ -179,7 +176,7 @@ class ObjDict(dict):
             elif WITH_TORCH and isinstance(self[key], torch.Tensor):
                 self[key] = self[key].cpu().clone().detach().numpy()
 
-    def as_torch(self, dtype: str="float32", device: str="cpu")-> None:
+    def as_torch(self, dtype: str="float32", device: str="cpu" )-> None:
         """ converts all lists and ndarrays to torch tensor
             DOES not check array validity
             DOES not convert dimensionless data
@@ -212,112 +209,3 @@ def _get_yaml_loader(loader=None):
     if not loader:
         loader = loaders
     return yaml.__dict__[loader[0]]
-
-class ObjTrace(ObjDict):
-    """ dict with object access
-        delta function for iterable members
-    """
-    def delta(self, name, i=-1, j=-2):
-        """ return self[name][i] - self[name][j]"""
-        assert isinstance(self[name], (tuple, list, np.ndarray)), "cannot delta type {}".format(type(self[name]))
-        assert abs(i) <= len(self[name]) and abs(j) <= len(self[name]), "indices ({} {}) outside of range {}".format(i, j, len(self[name]))
-        return self[name][i] - self[name][j]
-
-class TraceMem(ObjTrace):
-    """ ObjDict to tracing memory states
-    Example
-    >>> m = TraceMem()
-    >>> m.step(msg="") # collect /and log cpu and gpu
-    >>> m.log()     # log all colected steps
-    """
-    def __init__(self, units="MB"):
-        self.units = units
-        cpu = CPUse(units=self.units)
-        gpu = GPUse(units=self.units)
-
-        self.GPU = [gpu.available]
-        self.CPU = [cpu.available]
-
-        self.dGPU = [0]
-        self.dCPU = [0]
-
-        self.msg = ["Init"]
-        self.log_mem(cpu, gpu)
-
-    def log_mem(self, cpu, gpu):
-        print(f"  CPU: avail: {cpu.available} {self.units} \tused: {cpu.used} {self.units} ({cpu.percent}%)")
-        print(f"  GPU: avail: {gpu.available} {self.units} \tused: {gpu.used} {self.units} ({gpu.percent}%)")
-
-    def step(self, msg="", i=-2, j=-1, verbose=True):
-        cpu = CPUse(units=self.units)
-        gpu = GPUse(units=self.units)
-        self.CPU += [cpu.available]
-        self.GPU += [gpu.available]
-        self.msg +=[msg]
-        dCPU = self.delta('CPU', i=i, j=j)
-        dGPU = self.delta('GPU', i=i, j=j)
-        self.dGPU += [dGPU]
-        self.dCPU += [dCPU]
-
-        if verbose:
-            msg = msg + ": " if msg else ""
-            print(f"{msg}Used CPU {dCPU}, GPU {dGPU} {self.units}")
-            self.log_mem(cpu, gpu)
-
-    def log(self):
-        print("{:^6}{:>12}{:>12}{:>12}{:>12}".format("step", "CPU avail", "CPU added",
-                                                     "GPU avail", "GPU added"))
-        for i in range(len(self.GPU)):
-            print("{:^6}{:>12}{:>12}{:>12}{:>12}  {:<6}".format(i, f"{self.CPU[i]} {self.units}",
-                                                                f"({self.dCPU[i]})",
-                                                                f"{self.GPU[i]} {self.units}",
-                                                                f"({self.dGPU[i]})", self.msg[i]))
-
-def get_smi(query):
-    _cmd = ['nvidia-smi', '--query-gpu=memory.%s'%query, '--format=csv,nounits,noheader']
-    return int(sp.check_output(_cmd, encoding='utf-8').split('\n')[0])
-
-class GPUse:
-    """thin wrap to nvidia-smi"""
-    def __init__(self, units="MB"):
-        self.total = get_smi("total")
-        self.used = get_smi("used")
-        self.available = self.total - self.used
-        self.percent = round(100*self.used/self.total, 1)
-        self.units = units if units[0].upper() in ('G', 'M') else 'MB'
-        self._fix_units()
-
-    def _fix_units(self):
-        if self.units[0].upper() == "G":
-            self.units = "GB"
-            self.total //= 2**10
-            self.used //= 2**10
-            self.available //= 2**10
-
-    def __repr__(self):
-        return "GPU: ({})".format(self.__dict__)
-
-class CPUse:
-    """thin wrap to psutil.virtual_memory to matching nvidia-smi syntax"""
-    def __init__(self, units="MB"):
-        cpu = psutil.virtual_memory()
-        self.total = cpu.total
-        self.used = cpu.used
-        self.available= cpu.available
-        self.percent = cpu.percent
-        self.units = units if units[0].upper() in ('G', 'M') else 'MB'
-        self._fix_units()
-
-    def _fix_units(self):
-        _scale = 20
-        if self.units[0].upper() == "G":
-            self.units = "GB"
-            _scale = 30
-        else:
-            self.units = "MB"
-        self.total //= 2**_scale
-        self.used //= 2**_scale
-        self.available //= 2**_scale
-
-    def __repr__(self):
-        return "CPU: ({})".format(self.__dict__)

@@ -13,6 +13,7 @@ Repo collecting some common tools for pytorch and numpy. Changed the name to こ
 `Col()`             class, color print codes<br>
 
 ### memory
+`@memory_profiler`  decorator class using digest of nvml, torch.profiler and torch.cuda.memory_stats()
 `GPUse()`           class, thin wrap around nvidia-smi <br>
 `CPUse()`           class, thin wrap around psutil.virtualmemory <br>
 `ObjTrace()`        class, GPU and CPU collection based on ObjDict <br>
