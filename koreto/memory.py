@@ -85,6 +85,7 @@ class memory_profiler:
         # clear cuda cached memory and peak
         torch.cuda.empty_cache()
         torch.cuda.reset_peak_memory_stats()
+        torch.cuda.reset_accumulated_memory_stats()
 
         # print availabe cuda before running function
         print(f"@memory_profiler\nnvml snapshot before '{self.func.__name__}()':")
@@ -97,6 +98,7 @@ class memory_profiler:
             print(f"  cuda:{i}\ttotal {device.total >> 20} MB, used {device.used >> 20} MB, free {device.free >> 20} MB")
             free.append(device.free)
 
+        self.cuda_torch_peak(f"before {self.func.__name__}()")
 
         # function call
         # collect per call times and use
@@ -126,17 +128,7 @@ class memory_profiler:
         for event in timed_events[:10]:
             print(f"  {event[0]:35} {self.msus(event[2]):8}\t {self.msus(event[3]):8}")
 
-
-        print(f"\ncuda.memory_stats()")
-        for i in device_indices:
-            peak = 0
-            current = 0
-            for stat, val in torch.cuda.memory_stats(device=i).items():
-                if val > peak:
-                    peak = val
-                if 'current' in stat and val > current:
-                    current = val
-            print(f"  cuda:{i}\tpeak: {peak >> 20:8} MB\t current {current >> 20:8} MB")
+        currents, peaks = self.cuda_torch_peak("after indices")
 
         torch.cuda.synchronize()
         torch.cuda.empty_cache()
@@ -147,8 +139,8 @@ class memory_profiler:
                 if 'current' in stat and val > current2:
                     current2 = val
 
-            if current2 < current:
-                print(f"\nunreleased memory: {current >> 20:8} MB -> {current2 >> 20} MB")
+            if current2 < currents[i]:
+                print(f"\nunreleased memory: {currents[i] >> 20:8} MB -> {current2 >> 20} MB")
 
         # measure nvml after function exits
         used = [nvml.nvmlDeviceGetMemoryInfo(nvml.nvmlDeviceGetHandleByIndex(i))
@@ -161,6 +153,24 @@ class memory_profiler:
 
         return out
 
+    @staticmethod
+    def cuda_torch_peak(msg=""):
+        currents = []
+        peaks =[]
+        device_indices = list(range(torch.cuda.device_count()))
+        print(f"\ncuda.memory_stats() {msg}")
+        for i in device_indices:
+            peak = 0
+            current = 0
+            for stat, val in torch.cuda.memory_stats(device=i).items():
+                if val > peak:
+                    peak = val
+                if 'current' in stat and val > current:
+                    current = val
+            print(f"  cuda:{i}\tpeak: {peak >> 20:8} MB\t current {current >> 20:8} MB")
+            peaks.append(peak)
+            currents.append(current)
+        return currents, peaks
 
     @staticmethod
     def msus(x):
