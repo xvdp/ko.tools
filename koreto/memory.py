@@ -9,13 +9,31 @@ decorator using nvml torch.cuda.memory_stat and torch.profiler.profile
 @memory_profiler
 """
 
+from os import stat
 import subprocess as sp
 import psutil
 import numpy as np
 import torch
 import pynvml as nvml  # pip install nvidia-ml-py
 from torch.profiler import profile, ProfilerActivity
+
+from koreto.camera import pixels_to_rays
 from .utils import ObjDict
+
+
+def has_cuda(*args, **kwargs):
+    """ recursive check if theres a cuda object in the inputs
+    """
+    next_args = []
+    for arg in list(args) + list(kwargs.values()):
+        if isinstance(arg, torch.Tensor) and arg.device.type == "cuda":
+            return True
+        elif isinstance(arg, (list, tuple, set)):
+            next_args += list(arg)
+    if next_args:
+        return has_cuda(*next_args)
+    return False
+
 
 # pylint: disable=no-member
 class memory_profiler:
@@ -35,9 +53,34 @@ class memory_profiler:
     """
     def __init__(self, func):
         self.func = func
-        self.count = 0
+
+    def _call_no_cuda(self, *args, **kwargs):
+        with profile(activities=[ProfilerActivity.CPU], profile_memory=True, record_shapes=True) as prof:
+            out = self.func(*args, **kwargs)
+        _name = f"{self.func.__name__}(): profile memory"
+        print(f"\n{_name:35} {'CPU':8}")
+        timed_events = []
+        for event in prof.key_averages():
+            _time =  event.cpu_time_total
+            if _time:
+                timed_events.append((self.format_event_name(event.__dict__['key'], 35), _time, event.cpu_time_total))
+            cpu = event.cpu_memory_usage >> 20
+            if cpu:
+                cpu = f"{cpu} MB" if cpu else "  -  "
+                print(f"  {self.format_event_name(event.__dict__['key'], 35):35} {cpu:8}")
+
+        _name = f"{self.func.__name__}(): profile time"
+        print(f"\n{_name:35} {'CPU':8}")
+        timed_events = sorted(timed_events, key=lambda x: x[1], reverse=True)
+        for event in timed_events[:10]:
+            print(f"  {event[0]:35} {self.msus(event[2]):8}")
+
+        return out
 
     def __call__(self, *args, **kwargs):
+    
+        if not has_cuda(*args, **kwargs) and not torch.cuda.is_initialized():
+            return self._call_no_cuda(*args, **kwargs)
 
         # clear cuda cached memory and peak
         torch.cuda.empty_cache()
@@ -54,6 +97,7 @@ class memory_profiler:
             print(f"  cuda:{i}\ttotal {device.total >> 20} MB, used {device.used >> 20} MB, free {device.free >> 20} MB")
             free.append(device.free)
 
+
         # function call
         # collect per call times and use
         with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory=True, record_shapes=True) as prof:
@@ -64,9 +108,10 @@ class memory_profiler:
         print(f"\n{_name:35} {'CPU':8}\t {'CUDA':8}")
         timed_events = []
         for event in prof.key_averages():
-            _time = max(event.cuda_time_total, event.cpu_time_total)
+            _time =  max(event.cuda_time_total, event.cpu_time_total)
             if _time:
-                timed_events.append((self.format_event_name(event.__dict__['key'], 35), _time, event.cpu_time_total, event.cuda_time_total))
+                timed_events.append((self.format_event_name(event.__dict__['key'], 35),
+                                     _time, event.cpu_time_total, event.cuda_time_total))
             cpu = event.cpu_memory_usage >> 20
             cuda = event.cuda_memory_usage >> 20
             if cpu or cuda:
@@ -74,7 +119,7 @@ class memory_profiler:
                 cuda = f"{cuda} MB" if cuda else "  -  "
                 print(f"  {self.format_event_name(event.__dict__['key'], 35):35} {cpu:8}\t {cuda:8}")
 
-        # sort by time used 
+        # sort by time used
         _name = f"{self.func.__name__}(): profile time"
         print(f"\n{_name:35} {'CPU':8}\t {'CUDA':8}")
         timed_events = sorted(timed_events, key=lambda x: x[1], reverse=True)
@@ -115,6 +160,7 @@ class memory_profiler:
         nvml.nvmlShutdown()
 
         return out
+
 
     @staticmethod
     def msus(x):

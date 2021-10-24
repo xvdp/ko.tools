@@ -7,7 +7,7 @@ methods to deal with files
 
     hash_file() # hash file, datasizie, content and optional metadata
     hash_folder() # folder or files
-    reversedict() # key with subkey 
+    reversedict() # key with subkey
 
 """
 from typing import Union, Any, Collection
