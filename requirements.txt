@@ -1,7 +1,7 @@
 absl-py>=0.10
 matplotlib>=3
 numpy>=1.15
-nvidia-ml-py>=11.0
+nvidia-ml-py==11.470.66
 pandas>=1
 pillow>=8
 psutil>=5

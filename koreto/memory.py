@@ -15,7 +15,8 @@ import psutil
 import numpy as np
 import torch
 import pynvml as nvml  # pip install nvidia-ml-py
-from torch.profiler import profile, ProfilerActivity
+if torch.__version__ >= '1.8':
+    from torch.profiler import profile, ProfilerActivity
 
 from koreto.camera import pixels_to_rays
 from .utils import ObjDict
@@ -55,26 +56,29 @@ class memory_profiler:
         self.func = func
 
     def _call_no_cuda(self, *args, **kwargs):
-        with profile(activities=[ProfilerActivity.CPU], profile_memory=True, record_shapes=True) as prof:
+
+        if torch.__version__ >= '1.8':
+            with profile(activities=[ProfilerActivity.CPU], profile_memory=True, record_shapes=True) as prof:
+                out = self.func(*args, **kwargs)
+            _name = f"{self.func.__name__}(): profile memory"
+            print(f"\n{_name:35} {'CPU':8}")
+            timed_events = []
+            for event in prof.key_averages():
+                _time =  event.cpu_time_total
+                if _time:
+                    timed_events.append((self.format_event_name(event.__dict__['key'], 35), _time, event.cpu_time_total))
+                cpu = event.cpu_memory_usage >> 20
+                if cpu:
+                    cpu = f"{cpu} MB" if cpu else "  -  "
+                    print(f"  {self.format_event_name(event.__dict__['key'], 35):35} {cpu:8}")
+
+            _name = f"{self.func.__name__}(): profile time"
+            print(f"\n{_name:35} {'CPU':8}")
+            timed_events = sorted(timed_events, key=lambda x: x[1], reverse=True)
+            for event in timed_events[:10]:
+                print(f"  {event[0]:35} {self.msus(event[2]):8}")
+        else:
             out = self.func(*args, **kwargs)
-        _name = f"{self.func.__name__}(): profile memory"
-        print(f"\n{_name:35} {'CPU':8}")
-        timed_events = []
-        for event in prof.key_averages():
-            _time =  event.cpu_time_total
-            if _time:
-                timed_events.append((self.format_event_name(event.__dict__['key'], 35), _time, event.cpu_time_total))
-            cpu = event.cpu_memory_usage >> 20
-            if cpu:
-                cpu = f"{cpu} MB" if cpu else "  -  "
-                print(f"  {self.format_event_name(event.__dict__['key'], 35):35} {cpu:8}")
-
-        _name = f"{self.func.__name__}(): profile time"
-        print(f"\n{_name:35} {'CPU':8}")
-        timed_events = sorted(timed_events, key=lambda x: x[1], reverse=True)
-        for event in timed_events[:10]:
-            print(f"  {event[0]:35} {self.msus(event[2]):8}")
-
         return out
 
     def __call__(self, *args, **kwargs):
@@ -100,47 +104,50 @@ class memory_profiler:
 
         self.cuda_torch_peak(f"before {self.func.__name__}()")
 
-        # function call
-        # collect per call times and use
-        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory=True, record_shapes=True) as prof:
+        if torch.__version__ >= '1.8':
+            # function call
+            # collect per call times and use
+            with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], profile_memory=True, record_shapes=True) as prof:
+                out = self.func(*args, **kwargs)
+
+            # trace memory by step
+            _name = f"{self.func.__name__}(): profile memory"
+            print(f"\n{_name:35} {'CPU':8}\t {'CUDA':8}")
+            timed_events = []
+            for event in prof.key_averages():
+                _time =  max(event.cuda_time_total, event.cpu_time_total)
+                if _time:
+                    timed_events.append((self.format_event_name(event.__dict__['key'], 35),
+                                        _time, event.cpu_time_total, event.cuda_time_total))
+                cpu = event.cpu_memory_usage >> 20
+                cuda = event.cuda_memory_usage >> 20
+                if cpu or cuda:
+                    cpu = f"{cpu} MB" if cpu else "  -  "
+                    cuda = f"{cuda} MB" if cuda else "  -  "
+                    print(f"  {self.format_event_name(event.__dict__['key'], 35):35} {cpu:8}\t {cuda:8}")
+
+            # sort by time used
+            _name = f"{self.func.__name__}(): profile time"
+            print(f"\n{_name:35} {'CPU':8}\t {'CUDA':8}")
+            timed_events = sorted(timed_events, key=lambda x: x[1], reverse=True)
+            for event in timed_events[:10]:
+                print(f"  {event[0]:35} {self.msus(event[2]):8}\t {self.msus(event[3]):8}")
+
+            currents, peaks = self.cuda_torch_peak("after indices")
+
+            torch.cuda.synchronize()
+            torch.cuda.empty_cache()
+
+            for i in device_indices:
+                current2 = 0
+                for stat, val in torch.cuda.memory_stats(device=i).items():
+                    if 'current' in stat and val > current2:
+                        current2 = val
+
+                if current2 < currents[i]:
+                    print(f"\nunreleased memory: {currents[i] >> 20:8} MB -> {current2 >> 20} MB")
+        else:
             out = self.func(*args, **kwargs)
-
-        # trace memory by step
-        _name = f"{self.func.__name__}(): profile memory"
-        print(f"\n{_name:35} {'CPU':8}\t {'CUDA':8}")
-        timed_events = []
-        for event in prof.key_averages():
-            _time =  max(event.cuda_time_total, event.cpu_time_total)
-            if _time:
-                timed_events.append((self.format_event_name(event.__dict__['key'], 35),
-                                     _time, event.cpu_time_total, event.cuda_time_total))
-            cpu = event.cpu_memory_usage >> 20
-            cuda = event.cuda_memory_usage >> 20
-            if cpu or cuda:
-                cpu = f"{cpu} MB" if cpu else "  -  "
-                cuda = f"{cuda} MB" if cuda else "  -  "
-                print(f"  {self.format_event_name(event.__dict__['key'], 35):35} {cpu:8}\t {cuda:8}")
-
-        # sort by time used
-        _name = f"{self.func.__name__}(): profile time"
-        print(f"\n{_name:35} {'CPU':8}\t {'CUDA':8}")
-        timed_events = sorted(timed_events, key=lambda x: x[1], reverse=True)
-        for event in timed_events[:10]:
-            print(f"  {event[0]:35} {self.msus(event[2]):8}\t {self.msus(event[3]):8}")
-
-        currents, peaks = self.cuda_torch_peak("after indices")
-
-        torch.cuda.synchronize()
-        torch.cuda.empty_cache()
-
-        for i in device_indices:
-            current2 = 0
-            for stat, val in torch.cuda.memory_stats(device=i).items():
-                if 'current' in stat and val > current2:
-                    current2 = val
-
-            if current2 < currents[i]:
-                print(f"\nunreleased memory: {currents[i] >> 20:8} MB -> {current2 >> 20} MB")
 
         # measure nvml after function exits
         used = [nvml.nvmlDeviceGetMemoryInfo(nvml.nvmlDeviceGetHandleByIndex(i))
