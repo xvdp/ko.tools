@@ -9,16 +9,14 @@ decorator using nvml torch.cuda.memory_stat and torch.profiler.profile
 @memory_profiler
 """
 
-from os import stat
 import subprocess as sp
 import psutil
 import numpy as np
 import torch
-import pynvml as nvml  # pip install nvidia-ml-py
+import pynvml as nvml
 if torch.__version__ >= '1.8':
     from torch.profiler import profile, ProfilerActivity
 
-from koreto.camera import pixels_to_rays
 from .utils import ObjDict
 
 
@@ -140,8 +138,8 @@ class memory_profiler:
 
             for i in device_indices:
                 current2 = 0
-                for stat, val in torch.cuda.memory_stats(device=i).items():
-                    if 'current' in stat and val > current2:
+                for stats, val in torch.cuda.memory_stats(device=i).items():
+                    if 'current' in stats and val > current2:
                         current2 = val
 
                 if current2 < currents[i]:
@@ -169,10 +167,10 @@ class memory_profiler:
         for i in device_indices:
             peak = 0
             current = 0
-            for stat, val in torch.cuda.memory_stats(device=i).items():
+            for stats, val in torch.cuda.memory_stats(device=i).items():
                 if val > peak:
                     peak = val
-                if 'current' in stat and val > current:
+                if 'current' in stats and val > current:
                     current = val
             print(f"  cuda:{i}\tpeak: {peak >> 20:8} MB\t current {current >> 20:8} MB")
             peaks.append(peak)
