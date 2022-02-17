@@ -55,6 +55,18 @@ class Col:
     YB = '\033[93m\033[1m'
     RB = '\033[91m\033[1m'
     B = '\033[1m'
+    @classmethod
+    def printg(cls, *args, **kwargs):
+        print(cls.GB,*args, cls.AU, **kwargs)
+    @classmethod
+    def printy(cls, *args, **kwargs):
+        print(cls.YB,*args, cls.AU, **kwargs)
+    @classmethod
+    def printr(cls, *args, **kwargs):
+        print(cls.RB,*args, cls.AU, **kwargs)
+    @classmethod
+    def printb(cls, *args, **kwargs):
+        print(cls.BB,*args, cls.AU, **kwargs)
 
 # pylint: disable=unsubscriptable-object
 # pylint: disable=no-member
