@@ -56,17 +56,19 @@ class Col:
     RB = '\033[91m\033[1m'
     B = '\033[1m'
     @classmethod
-    def printg(cls, *args, **kwargs):
-        print(cls.GB,*args, cls.AU, **kwargs)
-    @classmethod
-    def printy(cls, *args, **kwargs):
-        print(cls.YB,*args, cls.AU, **kwargs)
-    @classmethod
-    def printr(cls, *args, **kwargs):
-        print(cls.RB,*args, cls.AU, **kwargs)
-    @classmethod
-    def printb(cls, *args, **kwargs):
-        print(cls.BB,*args, cls.AU, **kwargs)
+    def print(cls, *args, color=None, **kwargs):
+        """ print with "color" kwarg in ['blue', 'yellow', 'green' 'red']
+        Example
+            >>> from koreto import Col
+            >>> print = Col().print
+            >>> print("blue beard", color="blue")
+            >>> print("standard", "colorless", "print")
+        """
+        if isinstance(color, str) and color[0].upper() in ['B','G','Y','R']:
+            color = cls.__dict__[f"{color[0].upper()}B"]
+            print(color, *args, cls.AU, **kwargs)
+        else:
+            print(*args, **kwargs)
 
 # pylint: disable=unsubscriptable-object
 # pylint: disable=no-member
