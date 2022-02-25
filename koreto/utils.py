@@ -9,6 +9,7 @@ from typing import TypeVar, Any, Optional
 from copy import deepcopy
 import os
 import os.path as osp
+import re
 import json
 import numpy as np
 import yaml
@@ -165,9 +166,9 @@ class ObjDict(dict):
         self._as_type(out_type, **kwargs)
 
     def _as_type(self, out_type: Optional[str] = None, **kwargs) -> None:
-        dtype = "float32" if "dtype" not in kwargs else kwargs["dtype"]
-        device = "cpu" if "device" not in kwargs else kwargs["device"]
         if out_type is not None:
+            dtype = "float32" if "dtype" not in kwargs else kwargs["dtype"]
+            device = "cpu" if "device" not in kwargs else kwargs["device"]
             if out_type[0] == "n":
                 self.as_numpy(dtype=dtype)
             elif out_type[0] in ('p', 't'):
@@ -209,11 +210,26 @@ def _get_fullname(name: str) -> str:
     return name
 
 def _get_yaml_loader(loader : Optional[str] = None) -> Any:
-    loaders = yaml.loader.__dict__['__all__']
-    loader = loader if loader is not None else ["FullLoader", "BaseLoader"]
-    loader = [loader] if isinstance(loader, str) else loader
 
-    loader = list(set(loaders) & set(loader))
-    if not loader:
-        loader = loaders
-    return yaml.__dict__[loader[0]]
+    loader = yaml.SafeLoader
+    # parse scientific notation
+    # https://stackoverflow.com/questions/30458977/yaml-loads-5e-6-as-string-and-not-a-number
+    loader.add_implicit_resolver(
+        u'tag:yaml.org,2002:float',
+        re.compile(u'''^(?:
+        [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
+        |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
+        |\\.[0-9_]+(?:[eE][-+][0-9]+)?
+        |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
+        |[-+]?\\.(?:inf|Inf|INF)
+        |\\.(?:nan|NaN|NAN))$''', re.X),
+        list(u'-+0123456789.'))
+    return loader
+    # loaders = yaml.loader.__dict__['__all__']
+    # loader = loader if loader is not None else ["FullLoader", "BaseLoader"]
+    # loader = [loader] if isinstance(loader, str) else loader
+
+    # loader = list(set(loaders) & set(loader))
+    # if not loader:
+    #     loader = loaders
+    # return yaml.__dict__[loader[0]]
