@@ -5,7 +5,8 @@
         TODO replace with nvml
     CPUse       thin wrap of psutils
 """
-from typing import TypeVar, Any, Optional
+from typing import TypeVar, Any, Optional, Callable
+import inspect
 from copy import deepcopy
 import os
 import os.path as osp
@@ -233,3 +234,28 @@ def _get_yaml_loader(loader : Optional[str] = None) -> Any:
     # if not loader:
     #     loader = loaders
     # return yaml.__dict__[loader[0]]
+
+
+def filter_kwargs(func: Callable, kwargs: dict, complete: bool = False) -> dict:
+    """ filters a set kwargs to match function args
+    Args:
+        func        callable
+        kwargs      dict
+        complete    bool [False], if True, checks that all required arguments are filled
+    """
+    required = []
+    args = []
+    for key, value in inspect.signature(func).parameters.items():
+        if key == "self":
+            continue
+        args.append(key)
+        if value.default == inspect._empty:
+            required.append(key)
+
+    out = {key:value for key, value in kwargs.items() if key in args}
+
+    if complete:
+        missing = [arg for arg in required if arg not in out]
+        assert not missing, f" missing required arguments {missing}"
+
+    return out 

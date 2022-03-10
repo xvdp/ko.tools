@@ -8,7 +8,7 @@ except:
     WITH_TORCH = False
     logging.warning("\033[93m\033[1mpytorch not found, only numpy functions loaded...\033[0m")
 
-from .utils import DeepClone, deepclone, ObjDict, IPP
+from .utils import DeepClone, deepclone, ObjDict, IPP, filter_kwargs
 from .memory import ObjTrace, TraceMem, GPUse, CPUse, has_cuda
 from .log import Col, PLog, sround, plotlog
 from .scheduling import Schedule
