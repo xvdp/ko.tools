@@ -29,6 +29,9 @@ Repo collecting some common tools for pytorch and numpy. Changed the name to こ
 ### random sampling
 `unique_randint()`  non repeating random ints (torch | numpy) <br>
 
+### pytorch sanity
+`@contiguous(msg)`  decorator that ensure contiguous tensor or tensor tuple outputs, msg optional <br>
+
 ### cameras
 *pytorch only, partial port from nerfies jax code* <br>
 `pixels_to_rays()`  pixels to rays given camera intrinsics <br>

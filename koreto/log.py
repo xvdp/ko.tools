@@ -6,15 +6,49 @@ simple loggers
 from typing import Any, Union
 import sys
 import datetime
+from functools import wraps
 import os
 import os.path as osp
 # import logging
+import torch
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 from .utils import ObjDict
 
+
+def contiguous(msg=None):
+    """ test wrapper to ensure functions return contiguous tensors
+    funcion output can be tensor, tuple or list of tensors
+    Example
+    >>> @contiguous("Permute Function"): 
+    >>> def perm(x):
+    >>>     return x.permute(3,1,0,2)
+    >>> y = perm(torch.randn(3,2,12,22))
+    []  make contiguous: Permute Function (22, 2, 3, 12)
+    """
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            res = f(*args, **kwargs)
+            if torch.is_tensor(res) and not res.is_contiguous():
+                res = res.contiguous()
+                if msg is not None:
+                    print(f"make contiguous: {msg} {tuple(res.shape)}")
+            elif isinstance(res, (list, tuple)):
+                _totuple = isinstance(res, tuple)
+                res = list(res)
+                for i in range(len(res)):
+                    if torch.is_tensor(res[i]) and not res[i].is_contiguous():
+                        res[i] = res[i].contiguous()
+                        if msg is not None:
+                            print(f"make contiguous[{i}]: {msg} {tuple(res[i].shape)}")
+                if _totuple:
+                    res = tuple(res)
+            return res
+        return wrapper
+    return decorator
 
 __all__ = ["sround", "Col", "PLog", "plotlog"]
 def sround(x: Union[np.ndarray, float, list, tuple], digits: int=1) -> Any:

@@ -22,7 +22,7 @@ from PIL import Image
 from koreto import WITH_TORCH
 if WITH_TORCH:
     import torch
-    Vector = (np.ndarray, torch.Tensor)
+    Vector = Union[np.ndarray, torch.Tensor]
 else:
     Vector = np.ndarray
 
@@ -87,7 +87,7 @@ def get_images(folder: Union[str, list, tuple]=".", recursive: bool=False,
         print(f"get_images()-> {len(out)} found")
     return out
 
-def rndlist(inputs: Union[list, tuple, Union[Vector]], num: int=1) -> Any:
+def rndlist(inputs: Union[list, tuple, Vector], num: int=1) -> Any:
     """ returns random subset from list
     Args
         inputs   (iterable)

@@ -10,7 +10,7 @@ except:
 
 from .utils import DeepClone, deepclone, ObjDict, IPP, filter_kwargs
 from .memory import ObjTrace, TraceMem, GPUse, CPUse, has_cuda
-from .log import Col, PLog, sround, plotlog
+from .log import Col, PLog, sround, plotlog, contiguous
 from .scheduling import Schedule
 from .grids import  mgrid, mgrid_pos, np_mgrid, np_mgrid_pos
 from .rndm import unique_randint
