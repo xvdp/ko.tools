@@ -139,6 +139,13 @@ class ObjDict(dict):
             _dict = yaml.load(_fi, Loader=_get_yaml_loader())
             self.update(_dict)
         self._as_type(out_type, **kwargs)
+        self._recurse_obj()
+    
+    def _recurse_obj(self):
+        for key in self:
+            if isinstance(self[key], dict):
+                self[key] = ObjDict(self[key])
+                self[key]._recurse_obj()
 
     def to_json(self, name: str) -> None:
         """save to json"""
@@ -165,6 +172,7 @@ class ObjDict(dict):
             _dict = json.load(_fi)
             self.update(_dict)
         self._as_type(out_type, **kwargs)
+        self._recurse_obj()
 
     def _as_type(self, out_type: Optional[str] = None, **kwargs) -> None:
         if out_type is not None:
