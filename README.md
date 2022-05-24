@@ -37,4 +37,12 @@ Repo collecting some common tools for pytorch and numpy. Changed the name to こ
 `pixels_to_rays()`  pixels to rays given camera intrinsics <br>
 `points_to_pixels()`pixels to rays given camera intrinsics<br>
 `rotate_rays()`     rotate rays by transform<br>
-`Camera()`          camera class, io, intrinsics, extrinsics
+`Camera()`          camera class, io, intrinsics, extrinsics<br>
+
+### info
+*pytorch only,*<br>
+`esd`                           Empirical Spectral Distribution of a tensor (binned eigen values)<br>
+`get_layer_esds(named_params)`  given a list of named_parameters returns ESDs<br>
+`plot_esds(model, name='weight')` given a model, plots ESDs of weight parameters<br>
+`pca`                           Principal Component Analysis of tensor<br>
+`kde`                           Gaussian Kernel Density Estimation of tensor<br>

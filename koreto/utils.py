@@ -103,6 +103,9 @@ class ObjDict(dict):
 
     def __setattr__(self, name: str, value: Any) -> None:
         self[name] = value
+        if isinstance(value, dict):
+            self[name] = ObjDict(self[name])
+            self[name]._recurse_obj()
 
     def __delattr__(self, name: str) -> None:
         del self[name]
@@ -140,7 +143,7 @@ class ObjDict(dict):
             self.update(_dict)
         self._as_type(out_type, **kwargs)
         self._recurse_obj()
-    
+  
     def _recurse_obj(self):
         for key in self:
             if isinstance(self[key], dict):
