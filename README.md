@@ -41,8 +41,8 @@ Repo collecting some common tools for pytorch and numpy. Changed the name to こ
 
 ### info
 *pytorch only,*<br>
-`esd`                           Empirical Spectral Distribution of a tensor (binned eigen values)<br>
-`get_layer_esds(named_params)`  given a list of named_parameters returns ESDs<br>
+`esd(tensor)`                     Empirical Spectral Distribution of a tensor (binned eigen values)<br>
+`get_esds(model, name='weight')`  given a model returns list of (name, ESD, shape)<br>
 `plot_esds(model, name='weight')` given a model, plots ESDs of weight parameters<br>
-`pca`                           Principal Component Analysis of tensor<br>
-`kde`                           Gaussian Kernel Density Estimation of tensor<br>
+`pca`                             Principal Component Analysis of tensor<br>
+`kde`                             Gaussian Kernel Density Estimation of tensor<br>

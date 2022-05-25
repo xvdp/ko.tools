@@ -178,30 +178,36 @@ def get_layer_pca(model, layer=0, components=None):
     return pca(_weight, components=components)
 
 
-def get_layer_esds(named_params):
-    return [esd(p.detach()) for n,p in named_params]
-
+def get_esds(model, min_param=0, max_param=None, name='weight'):
+    params = [(n, p) for n,p in model.named_parameters() if name in n][min_param:max_param]
+    esds = []
+    for n,p in params:
+        if torch.any(p):
+            esds.append((n, esd(p.detach()), tuple(p.shape)))
+        else:
+            print(f'No ESD for layer {n}, all values = 0')
+    return esds
 
 def plot_esds(model, min_param=0, max_param=None, figsize=(20,20), name='weight'):
     """ plots a grid of empirical spectral distributions for models parameters
     """
-    params = [(n, p) for n,p in model.named_parameters() if name in n][min_param:max_param]
-    nparams = len(params)
-    rows = (nparams)**(1/2)
-    cols = math.ceil(rows)
-    rows = int(rows)
-    if rows*cols < nparams:
-        rows += 1
-    esds = get_layer_esds(params)
-    plt.figure(figsize=figsize)
-    for i, n_p in enumerate(params):
-        n, p = n_p
-        plt.subplot(rows,cols,i+1)
-        plt.plot(*esds[i])
-        plt.title(f'{n}\n{tuple(p.shape)}')
-        plt.grid()
-    plt.tight_layout()
-    plt.show()
+    esds = get_esds(model, min_param, max_param, name)
+    nparams = len(esds)
+    if nparams:
+        rows = (nparams)**(1/2)
+        cols = math.ceil(rows)
+        rows = int(rows)
+        if rows*cols < nparams:
+            rows += 1
+        plt.figure(figsize=figsize)
+        for i, n_e in enumerate(esds):
+            _name, _esd, _shape = n_e
+            plt.subplot(rows,cols,i+1)
+            plt.plot(*_esd)
+            plt.title(f'{_name}\n{_shape}')
+            plt.grid()
+        plt.tight_layout()
+        plt.show()
 
 covariance = lambda x, y: (x.sub(x.mean(dim=0)).t() @ y.sub(y.mean(dim=0)))/ (len(x) - 1)
 mahalanobis = lambda x, y: ((x - y) @ torch.inverse(covariance(x, y)) @ (x - y).t())#**(1/2)
