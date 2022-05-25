@@ -46,3 +46,4 @@ Repo collecting some common tools for pytorch and numpy. Changed the name to こ
 `plot_esds(model, name='weight')` given a model, plots ESDs of weight parameters<br>
 `pca`                             Principal Component Analysis of tensor<br>
 `kde`                             Gaussian Kernel Density Estimation of tensor<br>
+`get_conv_zero_kernels(nn.Module)`Identifies conv kernels where all weights are below threshold <br>
