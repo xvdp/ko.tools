@@ -1,11 +1,13 @@
 """ empirical spectral density, gaussian kernel density estimation
 measures of structure of information
 """
+from typing import Union, Any
 import math
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
 import torch
+from torch import nn
 # pylint: disable=no-member
 # pylint: disable=not-callable
 def tensor_flat2(tensor, num_fixed_axes=1):
@@ -208,6 +210,42 @@ def plot_esds(model, min_param=0, max_param=None, figsize=(20,20), name='weight'
             plt.grid()
         plt.tight_layout()
         plt.show()
+
+def zero_kernels(x: torch.Tensor, threshold: float = 1e-5, name=None) -> tuple:
+    """ returns ('n_dead_kernels', n_kernels)
+    dead kernels are those where all weights are smaller than threshold
+    Args
+        x   torch.Tensor ndim 3,4,5
+    """
+    num_kernels = x.shape[0]*x.shape[1]
+    out = ((x.view(num_kernels, -1).abs() > threshold).sum(dim=-1) == 0).sum().item(), num_kernels
+    if name is not None:
+        out = name, *out
+    return out
+
+def get_conv_zero_kernels(module: Union[nn.Module, nn.Conv1d, nn.Conv2d, nn.Conv3d],
+                          threshold: float = 1e-5) -> Any:
+    """ identifies kernels where all weights are below a threshold
+    Args
+        module:     torchTensor (in_channels, out_channels, ...)    -> tuple(dead, number)
+                    nn.Conv<>d                                      -> tuple(dead, number)
+                    nn.Module       -> tuple(name, dead, number) # only dead convs are shown
+        threshold:  float [1e-5]
+    """
+    if isinstance(module, torch.Tensor) and module.ndim > 2:
+        return zero_kernels(module, threshold=threshold)
+    elif isinstance(module, (nn.Conv1d, nn.Conv2d, nn.Conv3d)):
+        return zero_kernels(module.weight, threshold=threshold)
+    elif isinstance(module, nn.Module):
+        out = []
+        for name, mod in module.named_modules():
+            if isinstance(mod, (nn.Conv1d, nn.Conv2d, nn.Conv3d)):
+                _bad = zero_kernels(mod.weight, threshold=threshold, name=name)
+                if _bad[1]:
+                    out.append(_bad)
+        return out
+    print(f"module {type(module)} expected in nn.Module or nn.Conv<>d")
+    return None
 
 covariance = lambda x, y: (x.sub(x.mean(dim=0)).t() @ y.sub(y.mean(dim=0)))/ (len(x) - 1)
 mahalanobis = lambda x, y: ((x - y) @ torch.inverse(covariance(x, y)) @ (x - y).t())#**(1/2)

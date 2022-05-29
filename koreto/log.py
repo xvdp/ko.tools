@@ -136,6 +136,7 @@ class PLog:
         self._end = {"end":"\r"} if "end" not in kwargs else kwargs["end"]
         self._allow_missing = True if "allow_missing" not in kwargs else kwargs["allow_missing"]
         _iloc = -1 if "iloc" not in kwargs else kwargs["iloc"]
+        init = True if 'init' not in kwargs else kwargs['init']
         self.read(iloc=_iloc, init=True)
 
     def read(self, iloc=-1, init=False):
