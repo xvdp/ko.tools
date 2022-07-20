@@ -171,7 +171,10 @@ class PLog:
     def _check_for_armaggeddon(self, **values):
         if self.columns is not None:
             _bad = [key for key in values if key not in self.columns]
-            assert not _bad, f"keys {_bad} not in columns {self.columns}, to add new key run, self.extend_keys({_bad})"
+            if self._allow_missing:
+                self.extend_keys(_bad)
+            else:
+                assert not _bad, f"keys {_bad} not in columns {self.columns}, to add new key run, self.extend_keys({_bad})\n{Col.RB}{self.name}{Col.AU}"
 
     def collect(self, new_frame=False, **values):
         """collect key values to make dataframe
@@ -187,7 +190,7 @@ class PLog:
             _frame = {}
             for col in self.columns:
                 if col not in self.frame:
-                    assert self._allow_missing, "missing columns not allowed, pass [np.nan] to .write() or PLog(allow_missing=True)"
+                    assert self._allow_missing, "missing columns not allowed, pass [np.nan] to .write() or PLog(allow_missing=True)\n{Col.RB}{self.name}{Col.AU}"
                     _frame[col] = [np.nan]
                 else:
                     _frame[col] = self.frame[col]
@@ -238,7 +241,7 @@ class PLog:
 
 
 ## TODO: move to PLOG, generalize, selfupdating
-def plotlog(logname, column="Loss", figsize=(10,5), title=None, label=None, show=True, fro=0, to=None, ylog=True):
+def plotlog(logname, column="Loss", figsize=(10,5), title=None, label=None, show=True, fro=0, to=None, ylog=True, ytick=None):
     """ plots column [Loss] from csv file
     if column 'Epoch' exists, ticks them
     Args
@@ -313,6 +316,11 @@ def plotlog(logname, column="Loss", figsize=(10,5), title=None, label=None, show
         plt.xlabel("Epochs")
 
     _yticks = [sround(y.min()), sround(y.max())]
+    if ytick is not None:
+        if isinstance(ytick, (int,float)):
+            ytick = [ytick]
+        _yticks += list(ytick)
+
     plt.yticks(_yticks, _yticks)
     plt.ylabel(_ylabel)
 
