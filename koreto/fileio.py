@@ -167,7 +167,7 @@ def hash_file(filename: str,
               metadata: Any = None,
               metakey: str = "metadata") -> dict:
     """
-    hash dictionary
+    returns a dictionary with md5 hash of date and content 
         name:       filename [if splitname: fullname]
         [folder]:   basedir if splitname
         datesize    md5 hash of tuple(mtime, size)
