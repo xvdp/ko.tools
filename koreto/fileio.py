@@ -30,6 +30,7 @@ else:
 def get_files(folder: Union[str, list, tuple] = ".",
               ext: Union[str, list, tuple] = None,
               recursive: bool = False,
+              filter_text: str = '',
               sortkey: Optional[str] = None) -> list:
     """ conditional file getter
 
@@ -37,6 +38,7 @@ def get_files(folder: Union[str, list, tuple] = ".",
         folder      (str|list ['.'])  folder | list of folders
         ext         (str|list [None]) file extensions, default, any
         recursive   (bool [False])
+        filter_text (str '') filters file paths containing <filter_ext>
         sortkey     (str [None]) None: alphabetically | 'mtime', 'ctime', 'atime', 'size'
 
     Examples:
@@ -52,10 +54,12 @@ def get_files(folder: Union[str, list, tuple] = ".",
     out = []
     for fold in folder:
         if not recursive:
-            out += [f.path for f in os.scandir(fold) if f.is_file() and cond(f.name, ext)]
+            out += [f.path for f in os.scandir(fold) if f.is_file() and
+                    cond(f.name, ext) and filter_text in f.path]
         else:
             for root, _, files in os.walk(fold):
-                out += [osp.join(root, name) for name in files if cond(name, ext)]
+                out += [osp.join(root, name) for name in files if cond(name, ext)
+                        and filter_text in osp.join(root, name)]
     key = {} if sortkey is None else {'key':osp.__dict__[f'get{sortkey}']}
     return sorted(out, **key)
 
