@@ -6,6 +6,7 @@ if WITH_TORCH:
     import torch
 
 # pylint: disable=no-member
+# pylint: disable=suppressed-message
 def mgrid(shape, dtype="float32", shift=0.5, flip_columns=True, layout=1, form="torch"):
     """ fast nd mgrid: not transposing means contiguity requires no fixing
     Args
@@ -46,7 +47,8 @@ def mgrid_pos(idx, shape, shift=0.5, dtype="float32", flip_columns=True, layout=
             layout          int [1]: [N, dims] 0: [dims, N]
     """
     if not WITH_TORCH or form[0] == "n":
-        return np_mgrid_pos(idx, shape, shift=shift, dtype=dtype, flip_columns=flip_columns, layout=layout)
+        return np_mgrid_pos(idx, shape, shift=shift, dtype=dtype, flip_columns=flip_columns,
+                            layout=layout)
 
     dtype = dtype if isinstance(dtype, torch.dtype) else torch.__dict__[dtype]
     idx = torch.as_tensor(idx, dtype=dtype)

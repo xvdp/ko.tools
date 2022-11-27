@@ -35,6 +35,10 @@ Repo collecting some common tools for pytorch and numpy. Changed the name to こ
 ### pytorch sanity
 `@contiguous(msg)`  decorator that ensure contiguous tensor or tensor tuple outputs, msg optional <br>
 
+### pytorch general
+`unsqueeze_to`      unsqueeze as many steps as required to match tensor.ndim or int
+`extend_to`         add trailing dimensions for as many steps as required to match tensor.ndim or int
+
 ### cameras
 *pytorch only, partial port from nerfies jax code* <br>
 `pixels_to_rays()`  pixels to rays given camera intrinsics <br>

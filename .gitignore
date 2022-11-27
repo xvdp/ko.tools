@@ -8,3 +8,5 @@ dist/
 *.egg-info/
 version.py
 
+# local data
+sandbox/

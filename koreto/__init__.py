@@ -21,3 +21,4 @@ from .info import plot_esds, get_esds, get_layer_pca, pca, kde, esd
 if WITH_TORCH:
     from .camera import pixels_to_rays, rotate_rays, points_to_pixels, transform_points, Camera
     from .memory import memory_profiler
+    from .tensor_utils import extend_to, unsqueeze_to
