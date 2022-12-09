@@ -265,7 +265,7 @@ def plotlog(logname: str,
         to          (int [None]) plot ending with frame 'to' unsigned int != fro
         ylog        (bool [True]) -> plt.yscale='log'
         ytick       (tuple, list [None]) add ticks
-        ema
+        ema_window  (int [50]) size of averaging window
     """
 
     assert osp.isfile(logname), f"log file {logname} not found"
@@ -284,16 +284,15 @@ def plotlog(logname: str,
     if ema_window:
         ema = np.asarray(df[column].ewm(span=ema_window).mean())
 
-    if fro > 0 or to is not None:
-        to = to or len(y)
-        to = to%(len(y)+1)
-        # to = to if to is None else to%len(y)
-        fro = fro%len(y)
-        if fro >= to:
-            fro = 0
-        y = y[fro:to]
-        if ema is not None:
-            ema = ema[fro:to]
+
+    to = to or len(y)
+    to = to%(len(y)+1)
+    fro = fro%len(y)
+    if fro >= to:
+        fro = 0
+    y = y[fro:to]
+    if ema is not None:
+        ema = ema[fro:to]
 
     mins = []
     kwargs = {}
@@ -357,7 +356,7 @@ def plotlog(logname: str,
 
     if fro != 0:
         span = round(np.log10(to - fro))
-        _xticks = np.arange(fro, to, 10**(span-1))
+        _xticks = np.arange(fro, to + 1, 10**(span-1))
         plt.xticks(_xticks-fro, _xticks, rotation=75)
 
 
