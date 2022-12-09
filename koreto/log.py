@@ -3,7 +3,7 @@ simple loggers
 * pands train logger
 * plot train logger
 """
-from typing import Any, Union
+from typing import Any, Union, Optional
 import sys
 import datetime
 from functools import wraps
@@ -241,13 +241,31 @@ class PLog:
 
 
 ## TODO: move to PLOG, generalize, selfupdating
-def plotlog(logname, column="Loss", figsize=(10,5), title=None, label=None, show=True, fro=0, to=None, ylog=True, ytick=None):
+def plotlog(logname: str,
+            column: str = "Loss",
+            figsize: tuple = (10,5),
+            title: Optional[str] = None, 
+            label: Optional[str] = None,
+            show: bool = True,
+            fro: int = 0,
+            to: Optional[int] = None,
+            ylog: bool = True,
+            ytick: Union[None, tuple, list] = None,
+            ema_window: int = 50) -> None:
     """ plots column [Loss] from csv file
     if column 'Epoch' exists, ticks them
     Args
         logname     (str) csv. file
         column      (str ['Loss']) column to plot
-
+        figsize     (tuple [(10,5)])
+        title       (str [None])  add title to plot
+        label       (str [None])  add label to plot
+        show        (bool [True]) -> if false dont call plt.show()
+        fro         (int [0]) plot starting with frame 'fro'
+        to          (int [None]) plot ending with frame 'to' unsigned int != fro
+        ylog        (bool [True]) -> plt.yscale='log'
+        ytick       (tuple, list [None]) add ticks
+        ema
     """
 
     assert osp.isfile(logname), f"log file {logname} not found"
@@ -262,18 +280,40 @@ def plotlog(logname, column="Loss", figsize=(10,5), title=None, label=None, show
     if title is not None:
         plt.title(title)
     y = np.asarray(df[column])
-    if fro > 0 or to is not None:
-        y = y[fro:to]
+    ema = None
+    if ema_window:
+        ema = np.asarray(df[column].ewm(span=ema_window).mean())
 
+    if fro > 0 or to is not None:
+        to = to or len(y)
+        to = to%(len(y)+1)
+        # to = to if to is None else to%len(y)
+        fro = fro%len(y)
+        if fro >= to:
+            fro = 0
+        y = y[fro:to]
+        if ema is not None:
+            ema = ema[fro:to]
+
+    mins = []
     kwargs = {}
     if label is not None:
         kwargs["label"] = label
     else:
         kwargs["label"] = column
-    kwargs["label"] += f" {sround(y.min(), 2)}"
+    kwargs["label"] += f" {sround(y.min(), 2)} @ {np.argmin(y) + fro}"
     kwargs["markevery"] = [np.argmin(y)]
     kwargs["marker"] = 'v'
+    if ema is not None:
+        kwargs['alpha'] = 0.5
     plt.plot(y, **kwargs)
+    if ema is not None:
+        kwargs ={"markevery": np.argmin(ema),
+                 "marker": 'v',
+                 "label": f"ema {sround(ema.min(), 2)} @ {np.argmin(ema) + fro}",
+                 "linewidth": 2}
+        plt.plot(ema, **kwargs)
+        mins.append(sround(ema.min()))
 
     _info = f"Iters {len(df)}"
     if "Total_Time" in df:
@@ -315,9 +355,15 @@ def plotlog(logname, column="Loss", figsize=(10,5), title=None, label=None, show
         plt.xticks(xlabels, epochs+1-fro, rotation=rotation)
         plt.xlabel("Epochs")
 
-    _yticks = [sround(y.min()), sround(y.max())]
+    if fro != 0:
+        span = round(np.log10(to - fro))
+        _xticks = np.arange(fro, to, 10**(span-1))
+        plt.xticks(_xticks-fro, _xticks, rotation=75)
+
+
+    _yticks = [sround(y.min()), *mins, sround(y.max())]
     if ytick is not None:
-        if isinstance(ytick, (int,float)):
+        if isinstance(ytick, (int, float)):
             ytick = [ytick]
         _yticks += list(ytick)
 
