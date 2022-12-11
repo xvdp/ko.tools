@@ -281,19 +281,19 @@ class CPUse:
         self.used = cpu.used
         self.available= cpu.available
         self.percent = cpu.percent
-        self.units = units if units[0].upper() in ('G', 'M') else 'MB'
+        self.units = units
         self._fix_units()
 
     def _fix_units(self):
-        _scale = 20
-        if self.units[0].upper() == "G":
-            self.units = "GB"
-            _scale = 30
+        _units= {'K':10, 'M':20, 'G':30}
+        if self.units[0].upper() in _units:
+            _scale = _units[self.units[0].upper()]
+            self.total >>= _scale
+            self.used >>= _scale
+            self.available >>= _scale
         else:
-            self.units = "MB"
-        self.total //= 2**_scale
-        self.used //= 2**_scale
-        self.available //= 2**_scale
+            self.units = 'B'
+        self.units = {'B':'B', 'K':'KB', 'M':'MB', 'G':'GB'}[self.units[0].upper()]
 
     def __repr__(self):
         return "CPU: ({})".format(self.__dict__)
