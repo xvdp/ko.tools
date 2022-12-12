@@ -251,7 +251,7 @@ def plotlog(logname: str,
             to: Optional[int] = None,
             ylog: bool = True,
             ytick: Union[None, tuple, list] = None,
-            ema_window: int = 50) -> None:
+            ema_window: Union[int, tuple] = 50) -> None:
     """ plots column [Loss] from csv file
     if column 'Epoch' exists, ticks them
     Args
@@ -265,7 +265,7 @@ def plotlog(logname: str,
         to          (int [None]) plot ending with frame 'to' unsigned int != fro
         ylog        (bool [True]) -> plt.yscale='log'
         ytick       (tuple, list [None]) add ticks
-        ema_window  (int [50]) size of averaging window
+        ema_window  (int|tuple [50]) size(s) of averaging window
     """
 
     assert osp.isfile(logname), f"log file {logname} not found"
@@ -281,8 +281,11 @@ def plotlog(logname: str,
         plt.title(title)
     y = np.asarray(df[column])
     ema = None
-    if ema_window:
-        ema = np.asarray(df[column].ewm(span=ema_window).mean())
+    if isinstance(ema_window, int) and ema_window:
+        ema_window = (ema_window,)
+    
+    if isinstance(ema_window, tuple):
+        ema = [np.asarray(df[column].ewm(span=w).mean()) for w in ema_window]
 
 
     to = to or len(y)
@@ -292,7 +295,7 @@ def plotlog(logname: str,
         fro = 0
     y = y[fro:to]
     if ema is not None:
-        ema = ema[fro:to]
+        ema = [e[fro:to] for e in ema]
 
     mins = []
     kwargs = {}
@@ -307,12 +310,13 @@ def plotlog(logname: str,
         kwargs['alpha'] = 0.5
     plt.plot(y, **kwargs)
     if ema is not None:
-        kwargs ={"markevery": np.argmin(ema),
-                 "marker": 'v',
-                 "label": f"ema {sround(ema.min(), 2)} @ {np.argmin(ema) + fro}",
-                 "linewidth": 2}
-        plt.plot(ema, **kwargs)
-        mins.append(sround(ema.min()))
+        for i, e in enumerate(ema):
+            kwargs ={"markevery": np.argmin(e),
+                    "marker": 'v',
+                    "label": f"ema {sround(e.min(), 2)} @ {np.argmin(e) + fro} w:({ema_window[i]})",
+                    "linewidth": 2+i/2}
+            plt.plot(e, **kwargs)
+            mins.append(sround(e.min()))
 
     _info = f"Iters {len(df)}"
     if "Total_Time" in df:
@@ -356,7 +360,13 @@ def plotlog(logname: str,
 
     if fro != 0:
         span = round(np.log10(to - fro))
+        # _xticks = np.arange(10**span, to, 10**(span-1))
+        # _xticks = np.insert(_xticks[np.where(_xticks > fro)], 0, fro)
+        # if _xticks[-1] != to:
+        #     _xticks = np.append(_xticks, to)
         _xticks = np.arange(fro, to + 1, 10**(span-1))
+        if len(_xticks) > 3:
+            _xticks[1:-1] = np.round(_xticks[1:-1], -(span-1))
         plt.xticks(_xticks-fro, _xticks, rotation=75)
 
 
