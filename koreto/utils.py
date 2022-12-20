@@ -22,6 +22,7 @@ if WITH_TORCH:
 _T = TypeVar('_T')
 
 # pylint: disable=no-member
+# pylint: disable=suppressed-message
 # ###
 # Dictionaries and Memory management
 #
@@ -85,6 +86,22 @@ def deepclone(data: _T) -> _T :
     """
     return DeepClone(data).out
 
+def todict(obj):
+    """ convert ObjDict recursively to dict
+    """
+    if isinstance(obj, (list, tuple)):
+        _totuple = isinstance(obj, tuple)
+        obj = list(obj)
+        for i, item in enumerate(obj):
+            obj[i] = todict(item)
+        if _totuple:
+            obj = tuple(obj)
+    elif isinstance(obj, dict):
+        obj = dict(obj)
+        for key, val in obj.items():
+            obj[key] = todict(val)
+    return obj
+
 class ObjDict(dict):
     """ dict with object access to keys and read write to yaml files
     Examples:
@@ -120,7 +137,7 @@ class ObjDict(dict):
     def to_yaml(self, name: str) -> None:
         """ save to yaml"""
         with open(name, 'w') as _fi:
-            yaml.dump(dict(self), _fi)
+            yaml.dump(todict(self), _fi)
 
     def from_yaml(self,
                   name: str,
@@ -143,18 +160,24 @@ class ObjDict(dict):
             self.update(_dict)
         self._as_type(out_type, **kwargs)
         self._recurse_obj()
-  
+
     def _recurse_obj(self):
+        """ convert dict to ObjDict recursively
+        """
         for key in self:
             if isinstance(self[key], dict):
                 self[key] = ObjDict(self[key])
                 self[key]._recurse_obj()
 
+    def to_dict(self):
+        """convert ObjDict to dict recurively"""
+        return todict(self)
+
     def to_json(self, name: str) -> None:
         """save to json"""
         name = _get_fullname(name)
         with open(name, 'w') as _fi:
-            json.dump(dict(self), _fi)
+            json.dump(todict(self), _fi)
 
     def from_json(self,
                   name: str,
@@ -269,4 +292,4 @@ def filter_kwargs(func: Callable, kwargs: dict, complete: bool = False) -> dict:
         missing = [arg for arg in required if arg not in out]
         assert not missing, f" missing required arguments {missing}"
 
-    return out 
+    return out
