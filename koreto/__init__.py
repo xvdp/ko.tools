@@ -15,7 +15,7 @@ from .scheduling import Schedule
 from .grids import  mgrid, mgrid_pos, np_mgrid, np_mgrid_pos
 from .rndm import unique_randint
 from .lut import apply_cmap
-from .fileio import get_files, get_images, rndlist, hash_file, hash_folder
+from .fileio import get_files, get_images, rndlist, hash_file, hash_folder, randint, randitem
 from .info import plot_esds, get_esds, get_layer_pca, pca, kde, esd
 
 if WITH_TORCH:

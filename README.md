@@ -8,6 +8,7 @@ Repo collecting some common tools for pytorch and numpy. Changed the name to こ
 `filter_kwargs`     filters kwarg dict to pass to callable
 `deepclone()`       similar to deepcopy, clone and detach torch tensors to cpu <br>
 `get_files()`       get files from folder, optionally recursive, sorted <br>
+`randitem()`        get random item from a sequence <br>
 `get_images()`      get images, shortcut to get files with image formats accessible from PIL <br>
 `hash_file()`       returns a dictionary with md5 hash of date and file content  <br>
 
