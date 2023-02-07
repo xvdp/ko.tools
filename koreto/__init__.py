@@ -13,9 +13,9 @@ from .memory import ObjTrace, TraceMem, GPUse, CPUse, has_cuda
 from .log import Col, PLog, sround, plotlog, contiguous
 from .scheduling import Schedule
 from .grids import  mgrid, mgrid_pos, np_mgrid, np_mgrid_pos
-from .rndm import unique_randint
+from .rndm import unique_randint, randint, randitem, rndlist
 from .lut import apply_cmap
-from .fileio import get_files, get_images, rndlist, hash_file, hash_folder, randint, randitem
+from .fileio import get_files, get_images, hash_file, hash_folder
 from .info import plot_esds, get_esds, get_layer_pca, pca, kde, esd
 
 if WITH_TORCH:

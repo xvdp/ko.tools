@@ -3,7 +3,6 @@ methods to deal with files
 
     get_files(folders, ext, recursive) # recursive find file
     get_images(folders, recursive)
-    rndlist(inputs)
 
     hash_file() # hash file, datasizie, content and optional metadata
     hash_folder() # folder or files
@@ -11,7 +10,6 @@ methods to deal with files
 
 """
 from typing import Union, Any, Collection, Optional
-import random
 import os
 import os.path as osp
 import json
@@ -24,10 +22,8 @@ from koreto import WITH_TORCH
 if WITH_TORCH:
     import torch
     Vector = Union[np.ndarray, torch.Tensor]
-    Index = Union[int, torch.Tensor]
 else:
     Vector = np.ndarray
-    Index = int
 
 
 def get_files(folder: Union[str, list, tuple] = ".",
@@ -65,34 +61,6 @@ def get_files(folder: Union[str, list, tuple] = ".",
                         and filter_text in osp.join(root, name)]
     key = {} if sortkey is None else {'key':osp.__dict__[f'get{sortkey}']}
     return sorted(out, **key)
-
-
-def randint(items: Union[Vector, tuple, list], astorch: bool = False) -> Index:
-    """ returns random index in list, int or tensor
-    Args
-        items   (list|tuple|np.ndarray|torch.Tensor)
-        astorch (bool [False]) if True use torch random functions
-    """
-    if astorch and WITH_TORCH:
-        out = torch.randint(0, len(items), (1,))
-    else:
-        out = random.randint(0, len(items)-1)
-    return out
-
-
-def randitem(items: Union[Vector, tuple, list],
-             astorch: bool = False,
-             verbose: bool = False) -> Any:
-    """ returns random item in sequence
-    Args
-    items   (list|tuple|np.ndarray|torch.Tensor)
-    astorch (bool [False]) if True use torch random functions
-    verbose (bool [False]) if True print item
-    """
-    item = randint(items, astorch)
-    if verbose:
-        print(item)
-    return items[item]
 
 
 def verify_image(name: str, verbose: bool = False) -> bool:
@@ -139,19 +107,6 @@ def get_images(folder: Union[str, list, tuple] = ".",
     if verbose:
         print(f"get_images()-> {len(out)} found")
     return out
-
-
-def rndlist(inputs: Union[list, tuple, Vector], num: int = 1) -> list:
-    """ returns random subset from list
-    Args
-        inputs   (iterable)
-        num      (int [1]) number of elements returned
-    """
-    choice = np.random.randint(0, len(inputs), num)
-    if isinstance(inputs, Vector):
-        return inputs[choice]
-    return [inputs[c] for c in choice]
-
 
 #
 # hashing utils
