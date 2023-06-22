@@ -266,12 +266,17 @@ def plotlog(logname: str,
         ylog        (bool [True]) -> plt.yscale='log'
         ytick       (tuple, list [None]) add ticks
         ema_window  (int|tuple [50]) size(s) of averaging window
-    """
 
+    TODO: search for columns lowercase
+    TODO: add multiple logs
+    TODO: add stepped loss per epoch - from aubgment
+    """
+    logname = osp.abspath(osp.expanduser(logname))
     assert osp.isfile(logname), f"log file {logname} not found"
     _maxtick = 21
 
     df = pd.read_csv(logname)
+
     assert column in df, f"column {column} not found in {list(df.columns)}"
 
 
@@ -283,7 +288,7 @@ def plotlog(logname: str,
     ema = None
     if isinstance(ema_window, int) and ema_window:
         ema_window = (ema_window,)
-    
+
     if isinstance(ema_window, tuple):
         ema = [np.asarray(df[column].ewm(span=w).mean()) for w in ema_window]
 
