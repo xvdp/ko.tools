@@ -127,6 +127,15 @@ class ObjDict(dict):
     def __delattr__(self, name: str) -> None:
         del self[name]
 
+    def update_exclusive(self, *args, **kwargs):
+        """ update only existing kwargs
+        """
+        for a in args:
+            if isinstance(a, dict):
+                kwargs.update(a)
+        upk = {k:v for k,v in kwargs.items() if k in self}
+        self.update(**upk)
+
     def copyobj(self: _T) -> _T :
         """ .copy() returns a dict, not ObjDict"""
         return ObjDict(self.copy())
@@ -136,7 +145,7 @@ class ObjDict(dict):
 
     def to_yaml(self, name: str) -> None:
         """ save to yaml"""
-        with open(name, 'w') as _fi:
+        with open(name, 'w', encoding='utf8') as _fi:
             yaml.dump(todict(self), _fi)
 
     def from_yaml(self,
@@ -155,7 +164,7 @@ class ObjDict(dict):
         name = _get_fullname(name)
         if not update:
             self.clear()
-        with open(name, 'r') as _fi:
+        with open(name, 'r', encoding='utf8') as _fi:
             _dict = yaml.load(_fi, Loader=_get_yaml_loader())
             self.update(_dict)
         self._as_type(out_type, **kwargs)
@@ -176,7 +185,7 @@ class ObjDict(dict):
     def to_json(self, name: str) -> None:
         """save to json"""
         name = _get_fullname(name)
-        with open(name, 'w') as _fi:
+        with open(name, 'w', encoding='utf8') as _fi:
             json.dump(todict(self), _fi)
 
     def from_json(self,
@@ -194,7 +203,7 @@ class ObjDict(dict):
         """
         if not update:
             self.clear()
-        with open(name, 'r') as _fi:
+        with open(name, 'r', encoding='utf8') as _fi:
             _dict = json.load(_fi)
             self.update(_dict)
         self._as_type(out_type, **kwargs)
