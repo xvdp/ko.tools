@@ -17,6 +17,7 @@ from .rndm import unique_randint, randint, randitem, rndlist
 from .lut import apply_cmap
 from .fileio import get_files, get_images, hash_file, hash_folder
 from .info import plot_esds, get_esds, get_layer_pca, pca, kde, esd
+from .draw import draw_points, draw_axis, draw_vector
 
 if WITH_TORCH:
     from .camera import pixels_to_rays, rotate_rays, points_to_pixels, transform_points, Camera
