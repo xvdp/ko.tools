@@ -19,15 +19,18 @@ def draw_points(points: np.ndarray,
                 size: float = 1,
                 number: bool = False,
                 name: Optional[str] = None,
+                line: bool = False,
                 show: bool = False) -> go.Figure:
     """ scatter points
     Args
         points  (ndarray (N,3))
     """
+    kw = {'mode':'markers'}
+    if line:
+        kw['mode'] += '+lines'
     if number:
-        kw = {'mode':'markers+text', 'text':np.arange(len(points)).tolist()}
-    else:
-        kw = {'mode':'markers'}
+        kw['mode'] += '+text'
+        kw['text'] = np.arange(len(points)).tolist()
     if name is not None:
         kw['name'] = name
 

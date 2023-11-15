@@ -5,7 +5,7 @@
         TODO replace with nvml
     CPUse       thin wrap of psutils
 """
-from typing import TypeVar, Any, Optional, Callable
+from typing import TypeVar, Any, Optional, Callable, Union
 import inspect
 from copy import deepcopy
 import os
@@ -229,16 +229,25 @@ class ObjDict(dict):
             elif WITH_TORCH and isinstance(self[key], torch.Tensor):
                 self[key] = self[key].cpu().clone().detach().numpy()
 
-    def as_torch(self, dtype: str = "float32", device: str = "cpu" ) -> None:
+    def as_torch(self,
+                 dtype: Union[str, torch.dtype, None] = None,
+                 device: Union[str, torch.device, None] = None,
+                 **kwargs) -> None:
         """ converts all lists and ndarrays to torch tensor
             DOES not check array validity
             DOES not convert dimensionless data
         """
         assert WITH_TORCH, "pytorch not found, install first"
-        dtype = torch.__dict__[dtype]
-        for key in self:
-            if isinstance(self[key], (list, tuple, np.ndarray)):
-                self[key] = torch.as_tensor(self[key], dtype=dtype, device=device)
+        kwargs = {k:v for k,v in kwargs.items() if k in ['non_blocking', 'copy', 'memory_format']}
+        dtype = torch.__dict__[dtype] if isinstance(dtype, str) else dtype
+        device = torch.device(device) if isinstance(device, str) else device
+
+        for key, val in self.items():
+            if isinstance(val, (list, tuple, np.ndarray)):
+                self[key] = torch.as_tensor(self[key], dtype=dtype, device=device, **kwargs)
+            elif torch.is_tensor(val) and (dtype not in (None, val.dtype)
+                                           or device not in (None, val.device) or kwargs):
+                self[key] = self[key].to(dtype=dtype, device=device)
 
     def as_list(self) -> None:
         """ converts all tensors and ndarrays to list
