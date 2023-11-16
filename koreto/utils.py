@@ -111,7 +111,10 @@ class ObjDict(dict):
     >>> d.from_yaml(filename)       # load yaml
     >>> d.to_json(filename)         # write json
     >>> d.from_json(filename)       # load json
-    """
+    >>> d.from_json(filename, out_type='torch', device='cuda)       # load json
+    >>> d.as_numpy(*kwargs)         # convert lists and tensors to arrays
+    >>> d.as_torch(**kwargs)        # convert lists and ndarrays to tensors
+        """
     def __getattr__(self, name: str) -> Any:
         try:
             return self[name]
@@ -194,6 +197,7 @@ class ObjDict(dict):
                   out_type: Optional[str] = None,
                   **kwargs) -> None:
         """load json to dictionary
+        if json is list conver to indexed dictionary
         Args
             update      (bool [False]) False overwrites, True appends
             out_type    (str [None]) numpy, torch
@@ -205,9 +209,11 @@ class ObjDict(dict):
             self.clear()
         with open(name, 'r', encoding='utf8') as _fi:
             _dict = json.load(_fi)
+            if isinstance(_dict, (list,tuple)): # convert json list to dict
+                _dict = {i:_dict[i] for i in range(len(_dict))}
             self.update(_dict)
-        self._as_type(out_type, **kwargs)
         self._recurse_obj()
+        self._as_type(out_type, **kwargs)
 
     def _as_type(self, out_type: Optional[str] = None, **kwargs) -> None:
         if out_type is not None:
@@ -243,7 +249,9 @@ class ObjDict(dict):
         device = torch.device(device) if isinstance(device, str) else device
 
         for key, val in self.items():
-            if isinstance(val, (list, tuple, np.ndarray)):
+            if isinstance(val, ObjDict):
+                self[key].as_torch(dtype=dtype, device=device, **kwargs)
+            elif isinstance(val, (list, tuple, np.ndarray)):
                 self[key] = torch.as_tensor(self[key], dtype=dtype, device=device, **kwargs)
             elif torch.is_tensor(val) and (dtype not in (None, val.dtype)
                                            or device not in (None, val.device) or kwargs):
