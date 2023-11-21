@@ -174,12 +174,17 @@ class PLog:
             if self._allow_missing:
                 self.extend_keys(_bad)
             else:
-                assert not _bad, f"keys {_bad} not in columns {self.columns}, to add new key run, self.extend_keys({_bad})\n{Col.RB}{self.name}{Col.AU}"
+                assert not _bad, f"keys {_bad} not in columns {self.columns}, \
+                    to add new key run, self.extend_keys({_bad})\n{Col.RB}{self.name}{Col.AU}"
 
     def collect(self, new_frame=False, **values):
         """collect key values to make dataframe
-            values need to be key:[valyue]
+            values need to be key:[value]
         """
+        for key, val in values.items():
+            if isinstance(val, (torch.Tensor, np.ndarray)):
+                values[key] = val.tolist()
+
         if new_frame:
             self.frame = {}
         self._check_for_armaggeddon(**values)
@@ -190,7 +195,8 @@ class PLog:
             _frame = {}
             for col in self.columns:
                 if col not in self.frame:
-                    assert self._allow_missing, "missing columns not allowed, pass [np.nan] to .write() or PLog(allow_missing=True)\n{Col.RB}{self.name}{Col.AU}"
+                    assert self._allow_missing, f"missing columns not allowed, pass [np.nan] \
+                        to .write() or PLog(allow_missing=True)\n{Col.RB}{self.name}{Col.AU}"
                     _frame[col] = [np.nan]
                 else:
                     _frame[col] = self.frame[col]
@@ -199,7 +205,7 @@ class PLog:
             self.columns = list(self.frame.keys())
 
         _lens = []
-        for col in self.frame:
+        for col, val in self.frame.items():
             if not isinstance(self.frame[col], list):
                 self.frame[col] = [self.frame[col]]
             _len = len(self.frame[col])
@@ -207,9 +213,10 @@ class PLog:
                 _lens.append(_len)
         assert len(_lens) == 1, f"multiple column lengths found, {_lens}"
 
-    def write(self, new_frame=False, printlog=True, **values):
+    def write(self, new_frame=False, printlog=True, spaces=12, **values):
         """collect key values to make dataframe
         """
+
         # build dict
         self.collect(new_frame=new_frame, **values)
         self._fix_columns()
@@ -230,14 +237,15 @@ class PLog:
         self.len += 1
         self.values = {**self.frame}
         self.frame = {}
-        # log
-        if not self.len%self._log_interval:
-            if self.len == 1:
-                print("\t".join(list(self.values.keys())))
 
-            msg = [str(l[0]).replace("nan", "") for l in self.values.values()]
-            if printlog:
-                print("\t".join(msg), **self._end)
+        # log
+        if printlog and not self.len%self._log_interval:
+            if self.len == 1:
+                print( "".join([f"{it:>{spaces}}" for it in self.values.keys()]))
+
+            msg = "".join([f"{val[0]:>{spaces}}".replace("nan", "")
+                           for val in self.values.values()])
+            print((msg), **self._end)
 
 
 ## TODO: move to PLOG, generalize, selfupdating
