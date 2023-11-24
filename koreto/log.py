@@ -132,12 +132,11 @@ class PLog:
         self.frame = {}
         self.len = 0
 
-        self._log_interval = -1 if "log_interval" not in kwargs else kwargs["log_interval"]
-        self._end = {"end":"\r"} if "end" not in kwargs else kwargs["end"]
-        self._allow_missing = True if "allow_missing" not in kwargs else kwargs["allow_missing"]
-        _iloc = -1 if "iloc" not in kwargs else kwargs["iloc"]
-        init = True if 'init' not in kwargs else kwargs['init']
-        self.read(iloc=_iloc, init=True)
+        self._log_interval = kwargs.get("log_interval", -1)
+        self._end = kwargs.get("end", {"end":"\r"} )
+        self._allow_missing = kwargs.get("allow_missing", True)
+        self.data = None
+        self.read(iloc=kwargs.get('iloc', -1), init=kwargs.get('init', True))
 
     def read(self, iloc=-1, init=False):
         """
@@ -148,25 +147,65 @@ class PLog:
             os.makedirs(osp.split(self.name)[0], exist_ok=True)
             return None
 
-        dfl = pd.read_csv(self.name)
-        self.len = len(dfl)
-        self.columns = list(dfl.columns)
-        if len(dfl) > abs(iloc):
-            self.values = {k: dfl[k].iloc[iloc] for k in dfl}
+        self.data = pd.read_csv(self.name)
+        self.len = len(self.data)
+        self.columns = list(self.data.columns)
+        if len(self.data) > abs(iloc):
+            self.values = {k: self.data[k].iloc[iloc] for k in self.data}
         if init:
             print(f"{self.name} found with len {self.len}\n{self.values}")
-        return dfl
+        return self.data
+
+    def plot(self, *args, read=False, grid=False, labels=False, show=True, ax=None, **kwargs):
+        """
+        *args 
+        """
+        if read:
+            self.read()
+        _args = [arg for arg in args if arg in self.data]
+        assert len(_args), f"{args} not in {self.data.keys()}"
+
+        fro = kwargs.get("fro", 0)
+        to = kwargs.get("to", None)
+        if 'figsize' in kwargs:
+            plt.figure(figsize=kwargs.pop('figsize'))
+        ax = plt if ax is None else ax
+        if 'subplot' in kwargs:
+            subplot = kwargs['subplot']
+            if isinstance(subplot, int):
+                ax.subplot(subplot)
+            else:
+                ax.subplot(*subplot)
+        if 'title' in kwargs:
+            ax.title(kwargs['title'])
+        if grid:
+            ax.grid()
+        for arg in _args:
+            if arg in self.data:
+                kw = {}
+                if labels:
+                    kw['label'] = arg
+                ax.plot(self.data[arg][fro:to], **kw)
+        if 'xlabel' in kwargs:
+            ax.xlabel(kwargs['xlabel'])
+        if 'ylabel' in kwargs:
+            ax.label(kwargs['ylabel'])
+        if labels:
+            ax.legend()
+        if show:
+            plt.show()
+
 
     def extend_keys(self, new_keys):
         """ adds new nan values for all rows of new keys
             overwrites stored file with new with kesy
         """
-        dfl = self.read()
+        self.read()
         for key in new_keys:
-            if key not in dfl:
-                dfl[key] = [np.nan for i in range(self.len)]
-        self.columns = list(dfl.columns)
-        dfl.to_csv(self.name, index=False)
+            if key not in self.data:
+                self.data[key] = [np.nan for i in range(self.len)]
+        self.columns = list(self.data.columns)
+        self.data.to_csv(self.name, index=False)
 
     def _check_for_armaggeddon(self, **values):
         if self.columns is not None:
@@ -245,7 +284,7 @@ class PLog:
 
             msg = "".join([f"{val[0]:>{spaces}}".replace("nan", "")
                            for val in self.values.values()])
-            print((msg), **self._end)
+            print(msg, **self._end)
 
 
 ## TODO: move to PLOG, generalize, selfupdating
