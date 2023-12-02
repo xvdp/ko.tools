@@ -105,8 +105,9 @@ def todict(obj):
 class ObjDict(dict):
     """ dict with object access to keys and read write to yaml files
     Examples:
-    >>> d = ObjDict(**{some_key:some_value})
-    >>> d.new_key = some_value      # get or set keys as objects
+    >>> d = ObjDict(**{'some_key':some_value})
+    >>> d = ObjDict(some_key=some_value)
+    >>> d.new_key = some_value      # d['some_key'] = some_valye
     >>> d.to_yaml(filename)         # write yaml
     >>> d.from_yaml(filename)       # load yaml
     >>> d.to_json(filename)         # write json
@@ -114,6 +115,11 @@ class ObjDict(dict):
     >>> d.from_json(filename, out_type='torch', device='cuda)       # load json
     >>> d.as_numpy(*kwargs)         # convert lists and tensors to arrays
     >>> d.as_torch(**kwargs)        # convert lists and ndarrays to tensors
+    >>> d.as_list()  | d.tolist()
+    >>> d.update_exclusive(*args, **kwargs) # updates only existing keys
+    >>> d.getkey(index)             # acces by index: list(d.keys())[index]
+    >>> d.getvalue(index)           # acces by index: list(d.values())[index]
+    >>> d.getitem(index)            # acces by index: list(d.items())[index]
         """
     def __getattr__(self, name: str) -> Any:
         try:
@@ -130,7 +136,19 @@ class ObjDict(dict):
     def __delattr__(self, name: str) -> None:
         del self[name]
 
-    def update_exclusive(self, *args, **kwargs):
+    def getkey(self, index: int) -> Any:
+        """ get key by index"""
+        return list(self.keys())[index]
+
+    def getvalue(self, index: int) -> Any:
+        """ get key by index"""
+        return list(self.values())[index]
+
+    def getitem(self, index: int) -> tuple:
+        """ get key by index"""
+        return list(self.items())[index]
+
+    def update_exclusive(self, *args, **kwargs) -> None:
         """ update only existing kwargs
         """
         for a in args:
@@ -139,11 +157,14 @@ class ObjDict(dict):
         upk = {k:v for k,v in kwargs.items() if k in self}
         self.update(**upk)
 
-    def copyobj(self: _T) -> _T :
+    def copyobj(self: _T) -> _T:
         """ .copy() returns a dict, not ObjDict"""
         return ObjDict(self.copy())
 
-    def deepcopy(self: _T) -> _T :
+    def deepcopy(self: _T) -> _T:
+        """this is ok except in case of pytorch
+        TODO deep clone
+        """
         return deepcopy(self)
 
     def to_yaml(self, name: str) -> None:
@@ -264,6 +285,7 @@ class ObjDict(dict):
         for key in self:
             if isinstance(self[key], np.ndarray) or (WITH_TORCH and torch.is_tensor(self[key])):
                 self[key] = self[key].tolist()
+    tolist = as_list
 
 def _get_fullname(name: str) -> str:
     name = osp.expanduser(osp.abspath(name))
