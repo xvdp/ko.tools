@@ -2,6 +2,7 @@
 numpy / torch transformations with inputs of shapes [..., C]
 """
 from typing import Union
+import math
 import numpy as np
 import torch
 Vector = Union[np.ndarray, torch.Tensor]
@@ -9,10 +10,21 @@ Vector = Union[np.ndarray, torch.Tensor]
 # pylint: disable=no-member
 # pylint: disable=not-callable
 
-def estimate_point_normals(points: torch.Tensor, k: int = 10) -> torch.Tensor:
-    """ estimate point normals on local point cloud 
-    check    torch.cdist is slow?
+def mean_dist(p, size=1024, k=3):
+    """ KISS method to find mean distance to closest points
+    No good if too many points.
+    """
+    N, C = p.shape
+    steps = math.ceil(N/size)
+    j = dict(axis=-1)
+    return torch.cat([
+        ((p[i*size: (i+1)*size][:, None] - p)**2).sum(**j).sort(**j)[0][:, 1:k+1].mean(**j)
+         for i in range(steps)
+    ])
 
+def estimate_points_normals(points: torch.Tensor, k: int = 10) -> torch.Tensor:
+    """ estimate point normals on local point cloud 
+    No good if 4 * len(points)**2 > torch.cuda.get_device_properties(0).total_memory 
     Args
         points  (Tensor) shape(N, 3)
         k       (int [10])
@@ -20,8 +32,9 @@ def estimate_point_normals(points: torch.Tensor, k: int = 10) -> torch.Tensor:
     _, idcs = torch.cdist(points, points).topk(k + 1, largest=False)
     return fit_plane_normal(points[idcs[:, 1:]]) # [N, k, 3]
 
+
 def fit_plane_normal(points: Vector) -> Vector:
-    """Fit a plane to the points and return the normal.
+    """Fit a plane to the points and return normal or normals
 
     Args
         points  ndarray or tensor shape(..., N, 3)

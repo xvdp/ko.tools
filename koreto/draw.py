@@ -2,7 +2,7 @@
 """
 basic plotly utility
 """
-from typing import Tuple, Optional
+from typing import Optional, Any
 import numpy as np
 import plotly.graph_objs as go
 
@@ -18,21 +18,29 @@ def draw_points(points: np.ndarray,
                 fig: Optional[go.Figure] = None,
                 size: float = 1,
                 number: bool = False,
+                marker: bool = True,
                 name: Optional[str] = None,
                 line: bool = False,
+                hoverinfo: Any = None,
                 show: bool = False) -> go.Figure:
     """ scatter points
     Args
         points  (ndarray (N,3))
     """
-    kw = {'mode':'markers'}
+    kw = {}
+    modes = []
     if line:
-        kw['mode'] += '+lines'
+        modes += ['lines']
     if number:
-        kw['mode'] += '+text'
+        modes += ['text']
         kw['text'] = np.arange(len(points)).tolist()
+    if not modes or marker:
+        modes += ['markers']
+    kw['mode'] = "+".join(modes)
     if name is not None:
         kw['name'] = name
+    if hoverinfo is not None:
+        kw['hoverinfo'] = hoverinfo
 
     fig = new_fig(fig)
     if points.shape[-1] != 3:
@@ -111,24 +119,3 @@ def draw_vector(vector: np.ndarray,
     if show:
         fig.show()
     return fig
-
-
-
-def sort_points_by_distance(points:np.ndarray, center: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    # Calculate the squared Euclidean distances
-    dist_sq = np.sum((points - center) ** 2, axis=1)
-    sorted_indices = np.argsort(dist_sq)
-    return sorted_indices, dist_sq
-
-def zscore_keep(dist: np.ndarray, stds: float = 2) -> np.ndarray:
-    """ threshold by std """
-    return np.where(np.abs((dist - dist.mean())/dist.std()) < stds)[0]
-
-def irq_keep(distances: np.ndarray) -> np.ndarray:
-    q1 = np.percentile(distances, 25)
-    q3 = np.percentile(distances, 75)
-    iqr = q3 - q1
-    lower_bound = q1 - 1.5 * iqr
-    upper_bound = q3 + 1.5 * iqr
-    # outliers = np.where((distances < lower_bound) | (distances > upper_bound))
-    return np.where((distances > lower_bound) & (distances < upper_bound))[0]
