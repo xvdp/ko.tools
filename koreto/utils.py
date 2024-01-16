@@ -136,16 +136,21 @@ class ObjDict(dict):
     def __delattr__(self, name: str) -> None:
         del self[name]
 
+    @property
+    def keyslist(self):
+        """ property returning  list of keys"""
+        return list(self.keys())
+
     def getkey(self, index: int) -> Any:
         """ get key by index"""
         return list(self.keys())[index]
 
     def getvalue(self, index: int) -> Any:
-        """ get key by index"""
+        """ get value by index"""
         return list(self.values())[index]
 
     def getitem(self, index: int) -> tuple:
-        """ get key by index"""
+        """ get (key, value) by index"""
         return list(self.items())[index]
 
     def update_exclusive(self, *args, **kwargs) -> None:
