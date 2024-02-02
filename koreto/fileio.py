@@ -16,7 +16,8 @@ import json
 import pickle
 import hashlib
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageGrab
+
 
 from koreto import WITH_TORCH
 if WITH_TORCH:
@@ -24,6 +25,38 @@ if WITH_TORCH:
     Vector = Union[np.ndarray, torch.Tensor]
 else:
     Vector = np.ndarray
+
+def get_last(number: Optional[int] = 1,
+             folder: str = '.',
+             also_folders: bool = False,
+             ext: str = None) -> list:
+    """ get last files in folder
+    Args
+        number  (int [1])  number of files, None: all
+        folder  (str ['.'])
+        also_folders (bool [False]) return folders
+        ext     (str [None]) filter by extension 
+    """
+    folder = osp.abspath(osp.expanduser(folder))
+    files = [f.path for f in os.scandir(folder)
+             if (f.is_file() or also_folders) and
+             (ext is None or f.name.lower().endswith(ext.lower()))]
+    return sorted(files, key=os.path.getmtime, reverse=True)[:number]
+
+
+def clip_image(name="image.png"):
+    """Saves image from clipboard
+    """
+    name = osp.abspath(osp.expanduser(name))
+    _, ext = osp.splitext(name)
+    if ext.lower() not in (".png", ".jpg"):
+        name += ".png"
+    image = ImageGrab.grabclipboard()
+    if image:
+        image.save(name)
+        print(f"Saved clipboard {image.size} to '{name}'")
+    else:
+        print("No image found in the clipboard.")
 
 
 def get_files(folder: Union[str, list, tuple] = ".",

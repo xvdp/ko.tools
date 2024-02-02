@@ -16,7 +16,7 @@ from .scheduling import Schedule
 from .grids import  mgrid, mgrid_pos, np_mgrid, np_mgrid_pos
 from .rndm import unique_randint, randint, randitem, rndlist
 from .lut import apply_cmap
-from .fileio import get_files, get_images, hash_file, hash_folder
+from .fileio import get_files, get_images, hash_file, hash_folder, get_last, clip_image
 from .info import plot_esds, get_esds, get_layer_pca, pca, kde, esd
 from .draw import draw_points, draw_axis, draw_vector
 from .points import zscore_keep, irq_keep, sort_points_by_distance
