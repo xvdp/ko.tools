@@ -1,82 +1,117 @@
 """ empirical spectral density, gaussian kernel density estimation
 measures of structure of information
 """
-from typing import Union, Any
+from typing import Union, Any, Optional
 import math
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
 import torch
-from torch import nn
+from torch import nn, Tensor
 # pylint: disable=no-member
 # pylint: disable=not-callable
-def tensor_flat2(tensor, num_fixed_axes=1):
-    """ reshapes tensor ndim to tensor 2d
-        (samples, data)
-        N,C,H,W could be
-            (1, N*C*H*W)
-            (N, C*H*W)
-            (N*C, H*W) ... etc
-    """
-    _tensor = tensor.view(*tensor.shape[:num_fixed_axes], -1)
-    if num_fixed_axes > 1:
-        _tensor = _tensor.view(-1, _tensor.shape[-1])
-    if _tensor.ndim == 1:
-        _tensor = _tensor.view(1, -1)
-    return _tensor
 
-
-def entropy(tensor, num_fixed_axes=0, low=0, high=0):
-    """
-    returns tuple of tensors, (entropy, entropies)
-
+def tensor_flat2(x: Tensor, axis: int = 0, num: int = 1) -> Tensor:
+    """ Flattens ND, Tensors to 2D,
+    Return 2d tensor (num axis kept flattened, flattened dims)
     Args
-        tensor, ndim,
+        x               (Tensor) Nd
+        num_fixed_axis  (int [1]), defaults to batch dimension, in (0, x.ndim)
+        axis            (int [0]), defaults to batch dimension, in (0, x.ndim)
+            supports negative indexing: -1 == x.ndim -1
+    Examples
+    # x: shape N,C,H,W
+    >>> x = tensor_flat(x, axis=0, num=0) -> (1, N*C*H*W) 
+    >>> x = tensor_flat(x, axis=0, num=1) -> (N, C*H*W) # DEFAULT
+    >>> x = tensor_flat(x, axis=1, num=1) -> (C, N*H*W) 
+    >>> x = tensor_flat(x, axis=0, num=2) -> (N*C, H*W) 
+    >>> x = tensor_flat(x, axis=-1, num=1) -> (W, N*C*H)
+    >>> x = tensor_flat(x, axis=-1, num=2) -> (W*N, C*H)
+    >>> x = tensor_flat(x, axis=<any>, num=x.ndim) -> (N*C*H*W, 1)
+    """
+    if x.ndim == 1:
+        return x.reshape(1, -1)
+    axis = axis % x.ndim
+    num = np.clip(num, 0, x.ndim)
+    shape = tuple(np.concatenate((np.mod(list(range(axis, axis+num)), x.ndim),
+                                  np.mod(list(range(axis+num, axis+x.ndim)),
+                                         x.ndim))).astype(np.int64))
+    x = x.permute(shape).contiguous()
+    return x.reshape(np.prod(x.shape[:num], dtype=np.int64), np.prod(x.shape[num:], dtype=np.int64))
+
+
+def entropy(x: Tensor,
+            num_fixed_axes: int = 0,
+            low: float = 0,
+            high: float = 0,
+            base: Optional[float] = 2.,
+            axis: int = 0) -> Union[Tensor, tuple]:
+    """ Returns data entropy and entropy per item if num_fixed_axis > 0
+    -> (entropy, entropies) or > entrooy
+    where entropies is the entropy of each batch element ( if num_fixed_axis == 1)
+    Args
+        x           tensor
         num_fixed_axes (int [0]) in {0, tensor.ndim}, 0 returns only total entropy
         low, high, same as in torch.histc(min, max), if both are zero, are ignored.
-
+        base        (float [2]) number of bits, None uses number of items
+        axis    int [0] if num_fixed_axes >= 1, defaults to measure batch dimesnion, axis 0
+            when x: N,C,H,W or channel with x: C,H,W
     Example:
     >>> tensor=torch.randn(2,3,25,25)
     >>> Hs,Ht = entropy(torch.randn(2,3,25,25), num_fixed_axes=2)
     # Out[*] (tensor(0.8872), tensor([0.8709, 0.8681, 0.8771, 0.8620, 0.8698, 0.8617]))
     # total entropy, and entropy of each of (6) 25x25 datapoints
     """
-    out_h = _entropy(tensor, low=low, high=high)
-    if num_fixed_axes == 0:
-        return (out_h,)
+    if not x.dtype.is_floating_point:
+        _dtype = torch.float64 if x.itemsize == 8 else torch.float32
+        x = x.to(dtype=_dtype)
 
-    _tensor = tensor_flat2(tensor, num_fixed_axes=num_fixed_axes)
-    # compute sub entropies
-    sub_h = torch.stack([_entropy(_t, low=low, high=high) for _t in _tensor], dim=0)
+    out_h = _entropy(x, low=low, high=high, base=base)
+    if num_fixed_axes == 0:
+        return out_h
+
+    x = tensor_flat2(x, axis=axis, num=num_fixed_axes)
+    # compute entropy for each element
+    sub_h = torch.stack([_entropy(_t, low=low, high=high, base=base) for _t in x], dim=0)
     return out_h, sub_h
 
 
-def _entropy(tensor, low=0, high=0):
-    """ entropy of a tensor
-        Sum(-plog(p))
-        base of log length of tensor, number of events
+def _entropy(x: Tensor, low: float, high: float, base: Optional[float] = 2.) -> Tensor:
+    """ entropy of a tensor, number of bit it takes to encode each pixel
+        Σ(-p.log2(p))
+    Args
+        x           tensor
+        low, high   float if 0 & 0 are ignored, otherwise compute entrpy within range
+        base        (int [2]) log base, number of bits, None: number of events
     """
-    _t = tensor.view(-1)
-    _n = len(_t)
-    _th = torch.histc(_t, _n, low, high)/_n
-    _th = _th[_th > 0]
-    return torch.sum(-1*_th*torch.log(_th)).div(math.log(_n))
+    x = x.reshape(-1)
+    p = torch.histc(x, len(x), low, high)/len(x)
+    p = p[p > 0]
+    base = len(x) if base is None else base
+    return torch.sum(-1.*p*torch.log(p).div(np.log(base)))
+    # return torch.sum(-1*_th*torch.log(_th)).div(math.log(_n))
 
 
-def eigen_vals_low_rank(tensor, num_fixed_axes=1, components=64):
-    """ Eigen Values of Vectors using fast SVD
+def eigen_vals_low_rank(x: Tensor, num_fixed_axes: int = 1, components: int = 64) -> Tensor:
+    """ Eigen Values of Vectors using fast SVD per batch element
+    Args
+        x   Tensor
+        num_fixed_axis  (int [1]) by default compute eigen values per Batch element
+        components      (int [64])  svd compression
     """
-    _tensor = tensor_flat2(tensor, num_fixed_axes=num_fixed_axes)
-    components = min(components, len(_tensor))
-    _u, _s, _v = torch.svd_lowrank(_tensor, q=components)
+    x = tensor_flat2(x, num=num_fixed_axes)
+    components = min(components, len(x))
+    _u, _s, _v = torch.svd_lowrank(x, q=components)
     return _s**2 / len(_s)
 
 
-def eigen_vals(tensor, num_fixed_axes=1):
+def eigen_vals(x, num_fixed_axes: int = 1) -> Tensor:
     """ Eigen Values of Vectors using full SVD
+        x   Tensor
+        num_fixed_axis  (int [1]) by default compute eigen values per Batch element
     """
-    _tensor = tensor_flat2(tensor, num_fixed_axes=num_fixed_axes)
-    _u, _s, _v = torch.svd(_tensor.T)
+    x = tensor_flat2(x, num=num_fixed_axes)
+    _u, _s, _v = torch.svd(x.T)
     return _s**2 / len(_s)
 
 
@@ -247,5 +282,15 @@ def get_conv_zero_kernels(module: Union[nn.Module, nn.Conv1d, nn.Conv2d, nn.Conv
     print(f"module {type(module)} expected in nn.Module or nn.Conv<>d")
     return None
 
-covariance = lambda x, y: (x.sub(x.mean(dim=0)).t() @ y.sub(y.mean(dim=0)))/ (len(x) - 1)
-mahalanobis = lambda x, y: ((x - y) @ torch.inverse(covariance(x, y)) @ (x - y).t())#**(1/2)
+
+def covariance(x: Tensor, y: Tensor) -> Tensor:
+    """covariance matrix (x - μ) @ (y - μ) """
+    return (x.sub(x.mean(dim=0)).t() @ y.sub(y.mean(dim=0)))/(len(x) - 1)
+
+
+def mahalanobis(x: Tensor, y: Tensor) -> Tensor:
+    """ Mahalanobis distance: distance between a point and a distribution
+    multivariate generalization of square std score z = ( x - μ ) / σ
+    stds between point and mean of distribution
+    """
+    return ((x - y) @ torch.inverse(covariance(x, y)) @ (x - y).t())#**(1/2)

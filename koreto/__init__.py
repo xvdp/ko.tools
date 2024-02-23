@@ -18,6 +18,7 @@ from .rndm import unique_randint, randint, randitem, rndlist
 from .lut import apply_cmap
 from .fileio import get_files, get_images, hash_file, hash_folder, get_last, clip_image
 from .info import plot_esds, get_esds, get_layer_pca, pca, kde, esd
+from .info import entropy, eigen_vals, eigen_vals_low_rank, covariance, mahalanobis
 from .draw import draw_points, draw_axis, draw_vector
 from .points import zscore_keep, irq_keep, sort_points_by_distance
 from .transformations import fit_plane_normal, estimate_points_normals
