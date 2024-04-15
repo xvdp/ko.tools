@@ -22,6 +22,7 @@ from .info import entropy, eigen_vals, eigen_vals_low_rank, covariance, mahalano
 from .draw import draw_points, draw_axis, draw_vector
 from .points import zscore_keep, irq_keep, sort_points_by_distance
 from .transformations import fit_plane_normal, estimate_points_normals
+from .bounds import factorial, log_factorial
 
 if WITH_TORCH:
     from .camera import pixels_to_rays, rotate_rays, points_to_pixels, transform_points, Camera
